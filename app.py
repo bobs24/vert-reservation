@@ -8,37 +8,82 @@ import uuid
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="Voila Reservation Manager", 
+    page_title="Voila Manager", 
     layout="wide", 
     page_icon="🍽️",
     initial_sidebar_state="collapsed"
 )
 
-# --- CSS STYLING ---
+# --- 2. ELEGANT CSS OVERRIDES ---
 st.markdown("""
     <style>
-    .stApp {background-color: #F8F9FA;}
-    h1, h2, h3 {color: #12784A;}
+    /* 1. BACKGROUND & FONTS */
+    .stApp {
+        background-color: #F4F6F8;
+        font-family: 'Inter', sans-serif;
+    }
     
-    /* Make the Warning HUGE and RED */
+    /* 2. CARD CONTAINER STYLE */
+    .css-card {
+        background-color: white;
+        padding: 30px;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        border: 1px solid #E0E0E0;
+        margin-bottom: 20px;
+    }
+    
+    /* 3. INPUT FIELD STYLING (Force White) */
+    .stTextInput input, .stSelectbox div[data-baseweb="select"], .stNumberInput input, .stDateInput input, .stTimeInput input, .stMultiSelect div[data-baseweb="select"] {
+        background-color: #FFFFFF !important;
+        color: #333333 !important;
+        border: 1px solid #E0E0E0;
+        border-radius: 8px;
+    }
+    
+    /* Focus State (Green Border) */
+    .stTextInput input:focus, .stSelectbox div[data-baseweb="select"]:focus-within, .stMultiSelect div[data-baseweb="select"]:focus-within {
+        border-color: #12784A !important;
+        box-shadow: 0 0 0 1px #12784A !important;
+    }
+
+    /* 4. LABELS */
+    .stSelectbox label, .stTextInput label, .stDateInput label, .stTimeInput label, .stNumberInput label, .stMultiSelect label {
+        color: #12784A !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
+        margin-bottom: 5px !important;
+    }
+    
+    /* 5. BUTTONS */
+    .stButton > button {
+        width: 100%;
+        background-color: #12784A !important;
+        color: white !important;
+        border-radius: 8px !important;
+        padding: 0.6rem 1rem !important;
+        font-weight: 600 !important;
+        border: none !important;
+        transition: all 0.2s;
+    }
+    .stButton > button:hover {
+        background-color: #0e5e3a !important;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(18, 120, 74, 0.2);
+    }
+
+    /* 6. ALERTS */
     .stAlert {
-        font-weight: bold;
-        font-size: 1.2rem;
+        border-radius: 8px;
+        border: none;
     }
     
-    /* Style the Time Grid */
-    .js-plotly-plot {
-        border-radius: 10px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    
-    /* Bigger Fonts */
-    label { font-size: 1.1rem !important; color: #12784A !important; font-weight: bold !important; }
-    button { font-size: 1.2rem !important; }
+    /* Hide Default Header */
+    header {visibility: hidden;}
     </style>
 """, unsafe_allow_html=True)
 
-# --- 2. DATABASE CONNECTION ---
+# --- 3. DATABASE CONNECTION ---
 @st.cache_resource
 def get_connection():
     try:
@@ -51,12 +96,12 @@ def get_connection():
         client = gspread.authorize(creds)
         return client
     except Exception as e:
-        st.error(f"DB Error: {e}")
+        st.error(f"DB Connection Error: {e}")
         return None
 
 SHEET_ID = '1tZ2uHxY--NeEoknNBQBeMFyuyOfTnmE4HIG6camwHsc'
 
-# --- 3. DATA FUNCTIONS ---
+# --- 4. DATA FUNCTIONS ---
 def load_data():
     client = get_connection()
     if not client: return pd.DataFrame()
@@ -78,9 +123,19 @@ def add_reservation(payload):
     sheet = client.open_by_key(SHEET_ID).sheet1
     if not sheet.row_values(1):
         sheet.append_row(["Table", "Customer Name", "Start", "End", "Status", "ID", "Notes", "Pax"])
+    
+    # Payload table is now a list like ['Table 1', 'Table 2']. Join them into a string.
+    table_str = ", ".join(payload["Table"])
+    
     sheet.append_row([
-        payload["Table"], payload["Customer Name"], str(payload["Start"]), 
-        str(payload["End"]), payload["Status"], payload["ID"], payload["Notes"], payload["Pax"]
+        table_str, 
+        payload["Customer Name"], 
+        str(payload["Start"]), 
+        str(payload["End"]), 
+        payload["Status"], 
+        payload["ID"], 
+        payload["Notes"], 
+        payload["Pax"]
     ])
 
 def update_status_batch(changes_dict):
@@ -95,77 +150,97 @@ def update_status_batch(changes_dict):
         except: continue
     if updates: sheet.batch_update(updates)
 
-# --- 4. MAIN UI ---
+# --- 5. MAIN UI ---
 st.title("🍽️ Voila Reservation Manager")
 
-tab1, tab2 = st.tabs(["📝 NEW BOOKING", "📊 GRID SCHEDULE"])
+tab1, tab2 = st.tabs(["📝 NEW BOOKING", "📊 SCHEDULE GRID"])
 
 # ==========================================
-# TAB 1: BOOKING FORM
+# TAB 1: ELEGANT FORM
 # ==========================================
 with tab1:
-    # --- LOGIC FIX: DATE PICKER OUTSIDE FORM ---
-    # This ensures the warning happens INSTANTLY when you click the date
-    col_date_picker, _ = st.columns([1, 2])
-    with col_date_picker:
-        res_date = st.date_input("📅 Select Reservation Date", min_value=datetime.now())
+    with st.container():
+        st.markdown('<div class="css-card">', unsafe_allow_html=True)
         
-        # INSTANT WARNING
+        # --- 1. DATE PICKER & WARNING (Instant) ---
+        c_date, c_pad = st.columns([1, 2])
+        with c_date:
+            res_date = st.date_input("Select Date", min_value=datetime.now())
+            
         if res_date.weekday() == 0:
-            st.error("⛔ STOP! You selected a MONDAY. We are usually closed.")
-        else:
-            st.success(f"✅ Selected: {res_date.strftime('%A, %d %B %Y')}")
+            st.error("⛔ **STOP!** Monday selected. (Venue Closed)")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
 
-    # --- THE REST IS INSIDE THE FORM ---
+    # --- 2. THE FORM ---
     with st.form("res_form", clear_on_submit=True):
-        st.divider()
+        st.markdown('<div class="css-card">', unsafe_allow_html=True)
+        
+        st.markdown("### 👤 Guest Information")
+        
         df_cached = load_data()
         prev_customers = sorted(df_cached["Customer Name"].dropna().unique().tolist()) if not df_cached.empty else []
 
         c1, c2 = st.columns(2)
         with c1:
-            st.write("#### Guest Info")
-            cust_select = st.selectbox("Search Customer", [""] + prev_customers)
-            cust_new = st.text_input("Or New Customer Name")
-            final_cust = cust_new if cust_new else cust_select
-            pax = st.number_input("Pax", min_value=1, value=2)
-
+            cust_select = st.selectbox("Search Existing Customer", [""] + prev_customers)
         with c2:
-            st.write("#### Preferences")
-            res_time = st.time_input("Time", value=time(12, 0), step=900)
-            duration = st.selectbox("Duration", [1, 2, 3, 4], index=1, format_func=lambda x: f"{x} Hours")
-            table_list = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
-            table = st.selectbox("Table", table_list)
-
-        notes = st.text_input("Notes (Occasion, Highchair, etc)")
+            cust_new = st.text_input("Or Enter New Name")
         
-        submitted = st.form_submit_button("✅ CONFIRM RESERVATION", type="primary")
+        final_cust = cust_new if cust_new else cust_select
+        
+        st.markdown("---") 
+        st.markdown("### 🍽️ Table Details")
+        
+        c3, c4, c5, c6 = st.columns(4)
+        with c3:
+            pax = st.number_input("Guests (Pax)", min_value=1, value=2)
+        with c4:
+            res_time = st.time_input("Time", value=time(12, 0), step=900)
+        with c5:
+            duration = st.selectbox("Duration", [1, 2, 3, 4], index=1, format_func=lambda x: f"{x} Hours")
+        with c6:
+            # CHANGED: Multi-select for multiple tables
+            table_list = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
+            tables = st.multiselect("Assign Table(s)", table_list)
+
+        st.markdown("### 📝 Notes")
+        notes = st.text_input("Special Requests (Birthday, Allergy, Highchair...)")
+        
+        st.markdown("<br>", unsafe_allow_html=True)
+        submitted = st.form_submit_button("✅ CONFIRM RESERVATION")
+        
+        st.markdown('</div>', unsafe_allow_html=True)
 
         if submitted:
             if not final_cust:
-                st.error("Name is required.")
+                st.error("Please provide a Customer Name.")
+            elif not tables:
+                st.error("Please select at least one table.")
             else:
-                with st.spinner("Saving..."):
+                with st.spinner("Processing..."):
                     start_dt = datetime.combine(res_date, res_time)
                     end_dt = start_dt + timedelta(hours=duration)
                     payload = {
-                        "Table": table, "Customer Name": final_cust,
+                        "Table": tables, # List of tables
+                        "Customer Name": final_cust,
                         "Start": start_dt, "End": end_dt, "Status": "Reserved",
                         "ID": str(uuid.uuid4())[:8], "Notes": notes, "Pax": pax
                     }
                     add_reservation(payload)
-                    st.toast("Saved!", icon="🎉")
+                    st.toast("Reservation Created!", icon="🎉")
                     st.cache_resource.clear()
 
 # ==========================================
 # TAB 2: GRID VISUAL
 # ==========================================
 with tab2:
-    # FILTER
-    col_f1, col_f2 = st.columns([1, 4])
-    with col_f1:
-        view_date = st.date_input("Filter Date", datetime.now(), key="view_date")
+    st.markdown('<div class="css-card">', unsafe_allow_html=True)
     
+    col_f1, _ = st.columns([1, 4])
+    with col_f1:
+        view_date = st.date_input("📅 View Schedule For", datetime.now(), key="view_date")
+        
     df = load_data()
     
     if df.empty:
@@ -176,8 +251,6 @@ with tab2:
         df_day = df.loc[mask].copy()
 
         # --- GRID LOGIC ---
-        # 1. Create Time Slots (Columns)
-        # From 10:00 to 22:00 in 30 min chunks
         time_slots = []
         current_t = datetime.combine(view_date, time(10, 0))
         end_t = datetime.combine(view_date, time(22, 0))
@@ -186,26 +259,22 @@ with tab2:
             current_t += timedelta(minutes=30)
             
         time_labels = [t.strftime('%H:%M') for t in time_slots]
-        
-        # 2. Create Tables (Rows)
         all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
         
-        # 3. Build Heatmap Matrix (Z values) and Hover Text
-        z_data = [] # Color Values (0=Empty, 1=Booked)
-        text_data = [] # Text to show on hover
+        z_data = [] 
+        text_data = [] 
         
         for tbl in all_tables:
             row_z = []
             row_text = []
             for t_slot in time_slots:
-                # Default: Empty
                 is_booked = 0
                 hover_txt = "Available"
                 
-                # Check if this slot overlaps with any reservation for this table
-                # Overlap logic: (Start <= t_slot) AND (End > t_slot)
+                # Check for table match. 
+                # Since 'Table' col can now be "Table 1, Table 2", we check if current 'tbl' is IN that string
                 res_match = df_day[
-                    (df_day['Table'] == tbl) & 
+                    (df_day['Table'].str.contains(tbl, na=False)) & 
                     (df_day['Start'] <= t_slot) & 
                     (df_day['End'] > t_slot)
                 ]
@@ -222,33 +291,37 @@ with tab2:
             z_data.append(row_z)
             text_data.append(row_text)
 
-        # 4. PLOT HEATMAP (THE GRID)
+        # PLOT
         fig = go.Figure(data=go.Heatmap(
             z=z_data,
             x=time_labels,
             y=all_tables,
             text=text_data,
-            hoverinfo="text+y+x", # Show Custom text + Table + Time
-            colorscale=[[0, '#F0F2F6'], [1, '#12784A']], # 0=Light Grey, 1=Green
-            showscale=False, # Hide the color bar
-            xgap=1, # Gap between cells
-            ygap=1
+            hoverinfo="text",
+            colorscale=[[0, '#F8F9FA'], [1, '#12784A']], 
+            showscale=False,
+            xgap=2, 
+            ygap=2
         ))
         
         fig.update_layout(
-            title=f"Schedule Grid: {view_date.strftime('%d %b %Y')}",
+            title=f"Schedule: {view_date.strftime('%d %b %Y')}",
             height=500,
-            xaxis_title="Time Slots",
-            yaxis_autorange="reversed", # Table 1 at top
-            plot_bgcolor="white"
+            xaxis_title="Time",
+            yaxis_autorange="reversed",
+            plot_bgcolor="white",
+            margin=dict(l=10, r=10, t=40, b=10)
         )
         st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown('</div>', unsafe_allow_html=True)
 
-        # --- MANAGER LIST ---
-        st.divider()
-        st.write("#### 📋 Management List")
-        
-        # Include Cancelled here so we can see them
+    # --- MANAGER LIST ---
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.markdown('<div class="css-card">', unsafe_allow_html=True)
+    st.subheader("📋 Status Manager")
+    
+    if not df.empty:
         mask_all = (df['Start'].dt.date == view_date)
         df_all = df.loc[mask_all].copy().sort_values("Start")
         
@@ -264,13 +337,14 @@ with tab2:
             use_container_width=True
         )
 
-        if st.button("Save Changes"):
+        if st.button("💾 SAVE CHANGES"):
             changes = {}
             for i, row in edited_df.iterrows():
                 orig = df.loc[df['ID'] == row['ID'], 'Status'].values[0]
                 if row['Status'] != orig: changes[row['ID']] = row['Status']
             if changes:
                 update_status_batch(changes)
-                st.success("Updated!")
+                st.success("Database Updated!")
                 st.cache_resource.clear()
                 st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
