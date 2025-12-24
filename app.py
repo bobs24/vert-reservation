@@ -14,15 +14,21 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. ELEGANT CSS OVERRIDES ---
+# --- 2. ELEGANT CSS OVERRIDES (FIXED) ---
 st.markdown("""
     <style>
-    /* 1. BACKGROUND & FONTS */
+    /* 1. FORCE LIGHT THEME BACKGROUND & DARK TEXT */
     .stApp {
         background-color: #F4F6F8;
         font-family: 'Inter', sans-serif;
+        color: #333333 !important; /* Forces text to be dark even in Dark Mode */
     }
     
+    /* Force Headers to be Dark */
+    h1, h2, h3, h4, h5, h6, p, li, div {
+        color: #333333 !important;
+    }
+
     /* 2. CARD CONTAINER STYLE */
     .css-card {
         background-color: white;
@@ -33,12 +39,23 @@ st.markdown("""
         margin-bottom: 20px;
     }
     
-    /* 3. INPUT FIELD STYLING (Force White) */
-    .stTextInput input, .stSelectbox div[data-baseweb="select"], .stNumberInput input, .stDateInput input, .stTimeInput input, .stMultiSelect div[data-baseweb="select"] {
+    /* 3. INPUT FIELD STYLING (Force White Background / Dark Text) */
+    .stTextInput input, 
+    .stSelectbox div[data-baseweb="select"], 
+    .stNumberInput input, 
+    .stDateInput input, 
+    .stTimeInput input, 
+    .stMultiSelect div[data-baseweb="select"] {
         background-color: #FFFFFF !important;
         color: #333333 !important;
         border: 1px solid #E0E0E0;
         border-radius: 8px;
+    }
+    
+    /* Dropdown Options Styling (Fix for Dark Mode invisible text) */
+    div[data-baseweb="popover"], div[data-baseweb="menu"] {
+        background-color: #FFFFFF !important;
+        color: #333333 !important;
     }
     
     /* Focus State (Green Border) */
@@ -71,11 +88,23 @@ st.markdown("""
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(18, 120, 74, 0.2);
     }
+    
+    /* 6. TABS STYLING */
+    button[data-baseweb="tab"] {
+        background-color: transparent !important;
+        color: #555555 !important;
+        font-weight: 600;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #12784A !important;
+        border-bottom-color: #12784A !important;
+    }
 
-    /* 6. ALERTS */
+    /* 7. ALERTS */
     .stAlert {
         border-radius: 8px;
         border: none;
+        color: #333333 !important; /* Ensure alert text is readable */
     }
     
     /* Hide Default Header */
@@ -88,7 +117,7 @@ st.markdown("""
 def get_connection():
     try:
         if "gcp_service_account" not in st.secrets:
-            st.error("Secrets not found.")
+            # st.error("Secrets not found.") 
             return None
         creds_dict = st.secrets["gcp_service_account"]
         scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
@@ -304,12 +333,15 @@ with tab2:
             ygap=2
         ))
         
+        # ADDED: Explicit font color for the chart so labels are visible
         fig.update_layout(
-            title=f"Schedule: {view_date.strftime('%d %b %Y')}",
+            title=dict(text=f"Schedule: {view_date.strftime('%d %b %Y')}", font=dict(color="#333333")),
             height=500,
             xaxis_title="Time",
             yaxis_autorange="reversed",
             plot_bgcolor="white",
+            paper_bgcolor="white", # Ensures chart background is white
+            font=dict(color="#333333"), # Ensures axes labels are dark
             margin=dict(l=10, r=10, t=40, b=10)
         )
         st.plotly_chart(fig, use_container_width=True)
