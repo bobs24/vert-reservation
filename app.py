@@ -239,28 +239,44 @@ with tab2:
     end_view = datetime.combine(view_date, time(22, 0))
     all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
 
+    # Handle multiple tables in one booking
     if not df_plot.empty:
-        # Handle multiple tables in one booking
         df_plot = df_plot.assign(Table=df_plot['Table'].str.split(', ')).explode('Table')
-        
-        fig = px.timeline(
-            df_plot, 
-            x_start="Start", 
-            x_end="End", 
-            y="Table", 
-            hover_name="Customer Name",
-            hover_data={"Pax": True, "Start": "|%H:%M", "End": "|%H:%M", "Table": False},
-            color_discrete_sequence=["#12784A"]
-        )
-    else:
-        # CREATE EMPTY STATE: Render a chart with no data points
-        # We provide a dummy trace that is invisible to force the axes to render
-        fig = px.timeline(
-            pd.DataFrame([{"Table": all_tables[0], "Start": start_view, "End": start_view}]), 
-            x_start="Start", x_end="End", y="Table"
-        )
-        fig.update_traces(visible=False) # Hide the dummy data
-        st.info(f"✨ All tables are currently available for {view_date.strftime('%d %b %Y')}")
+
+    # ---- FORCE ALL TABLES TO APPEAR ----
+    # Create invisible dummy rows for each table
+    dummy_df = pd.DataFrame({
+        "Table": all_tables,
+        "Start": [start_view] * len(all_tables),
+        "End": [start_view] * len(all_tables),
+        "Customer Name": [""] * len(all_tables),
+        "Pax": [None] * len(all_tables)
+    })
+
+    # Combine real + dummy
+    plot_df = pd.concat([dummy_df, df_plot], ignore_index=True)
+
+    fig = px.timeline(
+        plot_df,
+        x_start="Start",
+        x_end="End",
+        y="Table",
+        hover_name="Customer Name",
+        hover_data={
+            "Pax": True,
+            "Start": "|%H:%M",
+            "End": "|%H:%M",
+            "Table": False
+        },
+        color_discrete_sequence=["#12784A"]
+    )
+
+    # Hide dummy bars (zero-length)
+    fig.update_traces(
+        selector=dict(x_end=start_view),
+        visible=False
+    )
+
 
     # 3. UNIFIED LAYOUT (Ensures consistency whether empty or full)
     fig.update_layout(
