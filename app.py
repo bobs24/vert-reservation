@@ -43,7 +43,7 @@ st.markdown("""
     
     /* Force text inside the dropdowns to be black */
     div[data-baseweb="select"] span {
-        color: #FFFFFF !important;
+        color: #000000 !important;
     }
     
     /* Fix the 'X' and arrow icons in dropdowns */
@@ -221,7 +221,7 @@ with tab1:
                     st.cache_resource.clear()
 
 # ==========================================
-# TAB 2: PRECISION GRID VISUAL
+# TAB 2: PRECISION GRID VISUAL (ALWAYS VISIBLE)
 # ==========================================
 with tab2:
     col_f1, _ = st.columns([1, 4])
@@ -230,64 +230,66 @@ with tab2:
         
     df = load_data()
     
-    if df.empty:
-        st.info("No Data.")
+    # 1. Filter data for the selected day
+    mask = (df['Start'].dt.date == view_date) & (df['Status'] != 'Cancelled') if not df.empty else []
+    df_plot = df.loc[mask].copy() if not df.empty else pd.DataFrame()
+
+    # 2. Define the full range and Table list
+    start_view = datetime.combine(view_date, time(10, 0))
+    end_view = datetime.combine(view_date, time(22, 0))
+    all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
+
+    if not df_plot.empty:
+        # Handle multiple tables in one booking
+        df_plot = df_plot.assign(Table=df_plot['Table'].str.split(', ')).explode('Table')
+        
+        fig = px.timeline(
+            df_plot, 
+            x_start="Start", 
+            x_end="End", 
+            y="Table", 
+            hover_name="Customer Name",
+            hover_data={"Pax": True, "Start": "|%H:%M", "End": "|%H:%M", "Table": False},
+            color_discrete_sequence=["#12784A"]
+        )
     else:
-        # Filter for the day and non-cancelled
-        mask = (df['Start'].dt.date == view_date) & (df['Status'] != 'Cancelled')
-        df_plot = df.loc[mask].copy()
+        # CREATE EMPTY STATE: Render a chart with no data points
+        # We provide a dummy trace that is invisible to force the axes to render
+        fig = px.timeline(
+            pd.DataFrame([{"Table": all_tables[0], "Start": start_view, "End": start_view}]), 
+            x_start="Start", x_end="End", y="Table"
+        )
+        fig.update_traces(visible=False) # Hide the dummy data
+        st.info(f"✨ All tables are currently available for {view_date.strftime('%d %b %Y')}")
 
-        if not df_plot.empty:
-            # We need to ensure Table is treated as a categorical row
-            # If a reservation has multiple tables "Table 1, Table 2", 
-            # we split them so they show up on both rows in the chart
-            df_plot = df_plot.assign(Table=df_plot['Table'].str.split(', ')).explode('Table')
-
-            # Create the Timeline (Gantt)
-            fig = px.timeline(
-                df_plot, 
-                x_start="Start", 
-                x_end="End", 
-                y="Table", 
-                hover_name="Customer Name",
-                hover_data={"Pax": True, "Start": "|%H:%M", "End": "|%H:%M", "Table": False},
-                color_discrete_sequence=["#12784A"] # Your signature green
-            )
-
-            # Define the full range of the view (10:00 to 22:00)
-            start_view = datetime.combine(view_date, time(10, 0))
-            end_view = datetime.combine(view_date, time(22, 0))
-
-            fig.update_layout(
-                xaxis_range=[start_view, end_view],
-                xaxis=dict(
-                    title="Time",
-                    tickformat="%H:%M",
-                    dtick=1800000, # 30 minutes in milliseconds
-                    gridcolor="#EEEEEE",
-                    showgrid=True,
-                    tickfont=dict(color="black", size=12)
-                ),
-                yaxis=dict(
-                    title="",
-                    categoryorder="array",
-                    categoryarray=[f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"],
-                    gridcolor="#EEEEEE",
-                    showgrid=True,
-                    tickfont=dict(color="black", size=14, family="Arial Black")
-                ),
-                plot_bgcolor="white",
-                paper_bgcolor="#F4F6F8",
-                height=600,
-                margin=dict(l=150, r=20, t=40, b=50)
-            )
-            
-            # Make bars thinner for a cleaner look
-            fig.update_traces(marker_line_color="white", marker_line_width=2, opacity=0.9)
-
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.warning("No reservations for this date.")
+    # 3. UNIFIED LAYOUT (Ensures consistency whether empty or full)
+    fig.update_layout(
+        xaxis_range=[start_view, end_view],
+        xaxis=dict(
+            title="Time",
+            tickformat="%H:%M",
+            dtick=1800000, # 30 mins
+            gridcolor="#EEEEEE",
+            showgrid=True,
+            tickfont=dict(color="black", size=12),
+            range=[start_view, end_view]
+        ),
+        yaxis=dict(
+            title="",
+            categoryorder="array",
+            categoryarray=all_tables, # This keeps the list visible even if empty
+            gridcolor="#EEEEEE",
+            showgrid=True,
+            tickfont=dict(color="black", size=14, family="Arial Black")
+        ),
+        plot_bgcolor="white",
+        paper_bgcolor="#F4F6F8",
+        height=600,
+        margin=dict(l=150, r=20, t=40, b=50)
+    )
+    
+    fig.update_traces(marker_line_color="white", marker_line_width=2, opacity=0.9)
+    st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
     st.subheader("📋 Status Reservation")
