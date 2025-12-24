@@ -19,8 +19,8 @@ st.markdown("""
     <style>
     /* 1. GLOBAL BACKGROUND & TEXT */
     .stApp {
-        background-color: #000000; /* Black Background */
-        color: #FFFFFF;
+        background-color: #F4F6F8; /* Light Grey Background */
+        color: #333333;
         font-family: 'Inter', sans-serif;
     }
 
@@ -42,7 +42,7 @@ st.markdown("""
     
     /* Force text inside the dropdowns to be black */
     div[data-baseweb="select"] span {
-        color: #000000 !important;
+        color: #FFFFFF !important;
     }
     
     /* Fix the 'X' and arrow icons in dropdowns */
