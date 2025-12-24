@@ -73,13 +73,13 @@ st.markdown("""
             
     /* 6. TAB STYLING (Add this to your CSS) */
     button[data-baseweb="tab"] {
-        color: #555555 !important; /* Unselected Text Color */
+        color: #000000 !important; /* Unselected Text Color */
         font-weight: 600 !important;
     }
     
     /* Selected Tab (Text & Underline) */
     button[data-baseweb="tab"][aria-selected="true"] {
-        color: #12784A !important;       /* Green Text */
+        color: #0000FF !important;       /* Blue Text */
         border-bottom-color: #12784A !important; /* Green Underline */
         background-color: transparent !important;
     }
