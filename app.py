@@ -8,7 +8,7 @@ import uuid
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="Voila Manager", 
+    page_title="Vert Reservation Manager", 
     layout="wide", 
     page_icon="🍽️",
     initial_sidebar_state="collapsed"
@@ -20,7 +20,7 @@ st.markdown("""
     /* 1. GLOBAL BACKGROUND & TEXT */
     .stApp {
         background-color: #F4F6F8; /* Light Grey Background */
-        color: #654321;
+        color: #654321; /* Dark Brown Text */
         font-family: 'Inter', sans-serif;
     }
 
@@ -133,7 +133,7 @@ def update_status_batch(changes_dict):
     if updates: sheet.batch_update(updates)
 
 # --- 5. MAIN UI ---
-st.title("🍽️ Voila Reservation Manager")
+st.title("🍽️ Vert Reservation Manager")
 
 tab1, tab2 = st.tabs(["📝 NEW BOOKING", "📊 SCHEDULE GRID"])
 
@@ -283,7 +283,7 @@ with tab2:
         st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
-    st.subheader("📋 Status Manager")
+    st.subheader("📋 Status Reservation")
     
     if not df.empty:
         mask_all = (df['Start'].dt.date == view_date)
