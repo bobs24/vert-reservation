@@ -20,7 +20,7 @@ st.markdown("""
     /* 1. GLOBAL BACKGROUND & TEXT */
     .stApp {
         background-color: #F4F6F8; /* Light Grey Background */
-        color: #333333;
+        color: #FFFFFF;
         font-family: 'Inter', sans-serif;
     }
 
