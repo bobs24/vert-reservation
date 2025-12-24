@@ -59,7 +59,7 @@ st.markdown("""
 
     /* 4. BUTTONS */
     .stButton > button {
-        background-color: #12784A !important;
+        background-color: #888888 !important;
         color: white !important;
         border: none !important;
         font-weight: bold;
