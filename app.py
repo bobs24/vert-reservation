@@ -5,7 +5,7 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime, timedelta, time
 import plotly.graph_objects as go
 import uuid
-import plately.express as px
+import plotly.express as px
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
