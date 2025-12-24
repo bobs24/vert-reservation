@@ -221,7 +221,7 @@ with tab1:
                     st.cache_resource.clear()
 
 # ==========================================
-# TAB 2: ORDER-LOCKED GRID VISUAL
+# TAB 2: PRECISION GRID VISUAL (Y-AXIS LOCKED)
 # ==========================================
 with tab2:
     col_f1, _ = st.columns([1, 4])
@@ -230,40 +230,38 @@ with tab2:
         
     df = load_data()
     
-    # 1. DEFINE THE STRICT ORDER (Top to Bottom)
-    # This list controls exactly how the receptionist sees the rows
-    table_order = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
-    
+    # 1. SETUP CONSTANTS
+    # This list defines the EXACT order and names for your Y-Axis
+    all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
     start_view = datetime.combine(view_date, time(10, 0))
     end_view = datetime.combine(view_date, time(22, 0))
 
-    # 2. FILTER DATA
+    # 2. FILTER & PREPARE DATA
     mask = (df['Start'].dt.date == view_date) & (df['Status'] != 'Cancelled') if not df.empty else []
-    df_day = df.loc[mask].copy() if not df.empty else pd.DataFrame()
+    df_plot = df.loc[mask].copy() if not df.empty else pd.DataFrame()
 
+    # We create the figure first
     fig = go.Figure()
 
-    if not df_day.empty:
-        # Explode multiselect tables into individual rows
-        df_plot = df_day.assign(Table=df_day['Table'].str.split(', ')).explode('Table')
+    if not df_plot.empty:
+        # Explode tables if someone booked "Table 1, Table 2"
+        df_plot = df_plot.assign(Table=df_plot['Table'].str.split(', ')).explode('Table')
         
-        # Add bars for existing reservations
-        for _, row in df_plot.iterrows():
+        # Add the bars
+        for i, row in df_plot.iterrows():
             fig.add_trace(go.Bar(
                 base=[row['Start']],
                 x=[row['End'] - row['Start']],
                 y=[row['Table']],
                 orientation='h',
                 marker_color='#12784A',
-                hovertemplate=f"<b>{row['Customer Name']}</b><br>Pax: {row['Pax']}<br>%{{base|%H:%M}} - %{{x|%H:%M}}<extra></extra>"
+                name=row['Customer Name'],
+                hovertemplate=f"<b>{row['Customer Name']}</b><br>Pax: {row['Pax']}<br>Time: %{{base|%H:%M}} - %{{x|%H:%M}}<extra></extra>"
             ))
     else:
-        # Add a "Zero-width" dummy bar to force the chart to initialize 
-        # using the first table in the order
-        fig.add_trace(go.Bar(base=[start_view], x=[0], y=[table_order[0]], visible=False))
-        st.info(f"✨ No bookings yet for {view_date.strftime('%d %b %Y')}")
+        st.info(f"✨ All tables are available for {view_date.strftime('%d %b %Y')}")
 
-    # 3. CRITICAL: LOCKING THE Y-AXIS ORDER
+    # 3. LOCK THE AXES (The fix for your empty Y-Axis)
     fig.update_layout(
         xaxis=dict(
             title="Time",
@@ -277,17 +275,18 @@ with tab2:
         ),
         yaxis=dict(
             title="",
+            # FORCE CATEGORICAL MODE
             type="category",
-            # This 'array' setting is what forces Table 1 to stay at the top
-            categoryorder="array",
-            categoryarray=table_order[::-1], # We reverse the list for 'reversed' autorange
+            # FORCE THESE SPECIFIC LABELS TO APPEAR
             tickmode="array",
-            tickvals=table_order,
-            ticktext=table_order,
+            tickvals=all_tables,
+            ticktext=all_tables,
+            categoryorder="array",
+            categoryarray=all_tables,
             gridcolor="#EEEEEE",
             showgrid=True,
             tickfont=dict(color="black", size=14, family="Arial Black"),
-            autorange="reversed" # This ensures Table 1 is at the top
+            autorange="reversed" # Keeps Table 1 at the top
         ),
         plot_bgcolor="white",
         paper_bgcolor="#F4F6F8",
