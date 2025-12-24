@@ -5,6 +5,7 @@ from google.oauth2.service_account import Credentials
 from datetime import datetime, timedelta, time
 import plotly.graph_objects as go
 import uuid
+import plately.express as px
 
 # --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
@@ -220,7 +221,7 @@ with tab1:
                     st.cache_resource.clear()
 
 # ==========================================
-# TAB 2: GRID VISUAL (Fixed Axis)
+# TAB 2: PRECISION GRID VISUAL
 # ==========================================
 with tab2:
     col_f1, _ = st.columns([1, 4])
@@ -232,68 +233,61 @@ with tab2:
     if df.empty:
         st.info("No Data.")
     else:
+        # Filter for the day and non-cancelled
         mask = (df['Start'].dt.date == view_date) & (df['Status'] != 'Cancelled')
-        df_day = df.loc[mask].copy()
+        df_plot = df.loc[mask].copy()
 
-        time_slots = []
-        current_t = datetime.combine(view_date, time(10, 0))
-        end_t = datetime.combine(view_date, time(22, 0))
-        while current_t <= end_t:
-            time_slots.append(current_t)
-            current_t += timedelta(minutes=30)
+        if not df_plot.empty:
+            # We need to ensure Table is treated as a categorical row
+            # If a reservation has multiple tables "Table 1, Table 2", 
+            # we split them so they show up on both rows in the chart
+            df_plot = df_plot.assign(Table=df_plot['Table'].str.split(', ')).explode('Table')
+
+            # Create the Timeline (Gantt)
+            fig = px.timeline(
+                df_plot, 
+                x_start="Start", 
+                x_end="End", 
+                y="Table", 
+                hover_name="Customer Name",
+                hover_data={"Pax": True, "Start": "|%H:%M", "End": "|%H:%M", "Table": False},
+                color_discrete_sequence=["#12784A"] # Your signature green
+            )
+
+            # Define the full range of the view (10:00 to 22:00)
+            start_view = datetime.combine(view_date, time(10, 0))
+            end_view = datetime.combine(view_date, time(22, 0))
+
+            fig.update_layout(
+                xaxis_range=[start_view, end_view],
+                xaxis=dict(
+                    title="Time",
+                    tickformat="%H:%M",
+                    dtick=1800000, # 30 minutes in milliseconds
+                    gridcolor="#EEEEEE",
+                    showgrid=True,
+                    tickfont=dict(color="black", size=12)
+                ),
+                yaxis=dict(
+                    title="",
+                    categoryorder="array",
+                    categoryarray=[f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"],
+                    gridcolor="#EEEEEE",
+                    showgrid=True,
+                    tickfont=dict(color="black", size=14, family="Arial Black")
+                ),
+                plot_bgcolor="white",
+                paper_bgcolor="#F4F6F8",
+                height=600,
+                margin=dict(l=150, r=20, t=40, b=50)
+            )
             
-        time_labels = [t.strftime('%H:%M') for t in time_slots]
-        all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
-        
-        z_data = [] 
-        text_data = [] 
-        
-        for tbl in all_tables:
-            row_z = []
-            row_text = []
-            for t_slot in time_slots:
-                is_booked = 0
-                hover_txt = "Available"
-                res_match = df_day[
-                    (df_day['Table'].str.contains(tbl, na=False)) & 
-                    (df_day['Start'] <= t_slot) & 
-                    (df_day['End'] > t_slot)
-                ]
-                if not res_match.empty:
-                    is_booked = 1
-                    cust_name = res_match.iloc[0]['Customer Name']
-                    pax_num = res_match.iloc[0]['Pax']
-                    hover_txt = f"{cust_name} ({pax_num} Pax)"
-                
-                row_z.append(is_booked)
-                row_text.append(hover_txt)
-            z_data.append(row_z)
-            text_data.append(row_text)
+            # Make bars thinner for a cleaner look
+            fig.update_traces(marker_line_color="white", marker_line_width=2, opacity=0.9)
 
-        fig = go.Figure(data=go.Heatmap(
-            z=z_data, x=time_labels, y=all_tables,
-            text=text_data, hoverinfo="text",
-            colorscale=[[0, '#F8F9FA'], [1, '#12784A']], 
-            showscale=False, xgap=2, ygap=2
-        ))
-        
-        # --- FIXED CHART LAYOUT ---
-        fig.update_layout(
-            title=dict(text=f"Schedule: {view_date.strftime('%d %b %Y')}", font=dict(color="#333333", size=20)),
-            height=600, # Increased height
-            xaxis_title="Time",
-            yaxis_autorange="reversed",
-            plot_bgcolor="white",
-            paper_bgcolor="#F4F6F8",
-            font=dict(color="#333333"),
-            # Increased margins so Y-axis labels fit
-            margin=dict(l=150, r=20, t=60, b=50),
-        )
-        # Explicitly set Y-axis font size
-        fig.update_yaxes(tickfont=dict(size=14, color='black', family="Arial Black"))
-        fig.update_xaxes(tickfont=dict(size=12, color='black'))
-        
-        st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("No reservations for this date.")
 
     st.markdown("---")
     st.subheader("📋 Status Reservation")
