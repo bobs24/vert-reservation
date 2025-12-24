@@ -60,7 +60,7 @@ st.markdown("""
     /* 4. BUTTONS */
     .stButton > button {
         background-color: #888888 !important;
-        color: white !important;
+        color: #FFFFFF !important;
         border: none !important;
         font-weight: bold;
     }
