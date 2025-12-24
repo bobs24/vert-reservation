@@ -221,7 +221,7 @@ with tab1:
                     st.cache_resource.clear()
 
 # ==========================================
-# TAB 2: PRECISION GRID VISUAL (ALWAYS VISIBLE)
+# TAB 2: PRECISION GRID VISUAL (Y-AXIS FIX)
 # ==========================================
 with tab2:
     col_f1, _ = st.columns([1, 4])
@@ -230,57 +230,47 @@ with tab2:
         
     df = load_data()
     
-    # 1. Filter data for the selected day
+    # 1. Setup constants
+    all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
+    start_view = datetime.combine(view_date, time(10, 0))
+    end_view = datetime.combine(view_date, time(22, 0))
+
+    # 2. Filter data
     mask = (df['Start'].dt.date == view_date) & (df['Status'] != 'Cancelled') if not df.empty else []
     df_plot = df.loc[mask].copy() if not df.empty else pd.DataFrame()
 
-    # 2. Define the full range and Table list
-    start_view = datetime.combine(view_date, time(10, 0))
-    end_view = datetime.combine(view_date, time(22, 0))
-    all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
-
     if not df_plot.empty:
-        # Handle multiple tables in one booking
         df_plot = df_plot.assign(Table=df_plot['Table'].str.split(', ')).explode('Table')
-        
         fig = px.timeline(
-            df_plot, 
-            x_start="Start", 
-            x_end="End", 
-            y="Table", 
-            hover_name="Customer Name",
-            hover_data={"Pax": True, "Start": "|%H:%M", "End": "|%H:%M", "Table": False},
-            color_discrete_sequence=["#12784A"]
+            df_plot, x_start="Start", x_end="End", y="Table", 
+            color_discrete_sequence=["#12784A"],
+            hover_name="Customer Name"
         )
     else:
-        # CREATE EMPTY STATE: Render a chart with no data points
-        # We provide a dummy trace that is invisible to force the axes to render
+        # If empty, create an invisible chart using the table list to force the axis
         fig = px.timeline(
-            pd.DataFrame([{"Table": all_tables[0], "Start": start_view, "End": start_view}]), 
+            pd.DataFrame([{"Table": t, "Start": start_view, "End": start_view} for t in all_tables]), 
             x_start="Start", x_end="End", y="Table"
         )
-        fig.update_traces(visible=False) # Hide the dummy data
-        st.info(f"✨ All tables are currently available for {view_date.strftime('%d %b %Y')}")
+        fig.update_traces(visible=False)
+        st.info(f"✨ All tables are available for {view_date.strftime('%d %b %Y')}")
 
-    # 3. UNIFIED LAYOUT (Ensures consistency whether empty or full)
+    # 3. CONFIGURE LAYOUT (The specific fix for your Y-axis)
     fig.update_layout(
         xaxis_range=[start_view, end_view],
         xaxis=dict(
-            title="Time",
-            tickformat="%H:%M",
-            dtick=1800000, # 30 mins
-            gridcolor="#EEEEEE",
-            showgrid=True,
-            tickfont=dict(color="black", size=12),
-            range=[start_view, end_view]
+            title="Time", tickformat="%H:%M", dtick=1800000, 
+            gridcolor="#EEEEEE", showgrid=True, tickfont=dict(color="black")
         ),
         yaxis=dict(
             title="",
+            # This forces the order and ensures names show even if data is missing
             categoryorder="array",
-            categoryarray=all_tables, # This keeps the list visible even if empty
+            categoryarray=all_tables, 
             gridcolor="#EEEEEE",
             showgrid=True,
-            tickfont=dict(color="black", size=14, family="Arial Black")
+            tickfont=dict(color="black", size=14, family="Arial Black"),
+            autorange="reversed" # Keeps Table 1 at the top
         ),
         plot_bgcolor="white",
         paper_bgcolor="#F4F6F8",
@@ -288,7 +278,6 @@ with tab2:
         margin=dict(l=150, r=20, t=40, b=50)
     )
     
-    fig.update_traces(marker_line_color="white", marker_line_width=2, opacity=0.9)
     st.plotly_chart(fig, use_container_width=True)
 
     st.markdown("---")
