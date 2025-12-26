@@ -102,7 +102,7 @@ def get_connection():
         st.error(f"DB Connection Error: {e}")
         return None
 
-SHEET_ID = '1tZ2uHxY--NeEoknNBQBeMFyuyOfTnmE4HIG6camwHsc'
+SHEET_ID = '1eUi8Neog9mXb5J17G3WTvCehtR0Bz3-mKkw49gG8tAE'
 
 # --- 4. DATA FUNCTIONS ---
 def load_data():
@@ -335,4 +335,5 @@ with tab2:
                 update_status_batch(changes)
                 st.success("Database Updated!")
                 st.cache_resource.clear()
+
                 st.rerun()
