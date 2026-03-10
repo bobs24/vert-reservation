@@ -44,9 +44,11 @@ st.markdown("""
     div[data-baseweb="base-input"], 
     div[data-baseweb="input"],
     .stTextInput div, .stNumberInput div, .stDateInput div {
-        background-color: #FFFFFF !important;
-        border: 2px solid #CBD5E0 !important;
-        border-radius: 6px !important;
+        background-color: transparent !important;
+        border: none !important;
+        border-bottom: 2px solid #12784A !important;
+        border-radius: 0px !important;
+        box-shadow: none !important;
     }
 
     div[role="listbox"] ul li, div[role="listbox"] div {
@@ -56,10 +58,10 @@ st.markdown("""
     }
 
     .stButton > button {
-        background-color: #12784A !important;
-        color: #FFFFFF !important;
+        background-color: #FFC107 !important;
+        color: #1A202C !important;
         border-radius: 6px !important;
-        font-weight: bold !important;
+        font-weight: 900 !important;
         font-size: 1.2rem !important;
         padding: 0.75rem !important;
         width: 100% !important;
@@ -68,7 +70,8 @@ st.markdown("""
     }
     
     .stButton > button:hover {
-        background-color: #0E5A37 !important;
+        background-color: #E0A800 !important;
+        color: #000000 !important;
     }
     
     div[data-baseweb="input"] > div:after {
