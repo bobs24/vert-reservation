@@ -16,60 +16,160 @@ st.set_page_config(
 
 # --- IMPROVED UI STYLING ---
 st.markdown("""
-    <style>
-    /* Main Background */
-    .stApp {
-        background-color: #F8FAFC !important;
-    }
+<style>
 
-    /* 1. THE BOX KILLER - This targets all labels and removes any background/border */
-    label, [data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] div {
-        background-color: transparent !important;
-        background: none !important;
-        border: none !important;
-        padding: 0 !important;
-        margin-bottom: 4px !important;
-        color: #1A202C !important; /* Solid dark text */
-        font-size: 1rem !important;
-        font-weight: 700 !important;
-        box-shadow: none !important;
-    }
+/* ---------- GLOBAL APP ---------- */
 
-    /* 2. INPUT FIELDS - Keep these boxed and clean */
-    div[data-baseweb="select"] > div, 
-    div[data-baseweb="base-input"], 
-    div[data-baseweb="input"],
-    .stTextInput div, .stNumberInput div, .stDateInput div {
-        background-color: #FFFFFF !important;
-        border: 1px solid #CBD5E0 !important;
-        border-radius: 8px !important;
-    }
+.stApp {
+    background-color: #F8FAFC;
+    font-family: "Inter", sans-serif;
+}
 
-    /* 3. THE BUTTONS - High contrast yellow */
-    .stButton > button {
-        background-color: #FFD700 !important; 
-        color: #000000 !important;
-        border-radius: 8px !important;
-        font-weight: 800 !important;
-        border: 2px solid #E6C200 !important;
-    }
-    
-    .stButton > button:hover {
-        background-color: #FFC107 !important;
-    }
+/* Standard page width feel */
+.block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+}
 
-    /* Clean up headers */
-    h1, h2, h3 {
-        color: #1A202C !important;
-        font-weight: 800 !important;
-    }
 
-    /* Metrics */
-    div[data-testid="stMetricValue"] {
-        color: #12784A !important;
-        font-weight: 800 !important;
-    }
-    </style>
+/* ---------- HEADERS ---------- */
+
+h1 {
+    font-size: 34px !important;
+    font-weight: 800 !important;
+    color: #0F172A !important;
+}
+
+h2, h3 {
+    font-weight: 700 !important;
+    color: #1E293B !important;
+}
+
+
+/* ---------- LABELS (THIS FIXES YOUR BOX GLITCH) ---------- */
+
+[data-testid="stWidgetLabel"] {
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin-bottom: 6px !important;
+}
+
+[data-testid="stWidgetLabel"] p {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #334155 !important;
+}
+
+
+/* ---------- INPUT BOX SYSTEM ---------- */
+
+div[data-baseweb="input"],
+div[data-baseweb="base-input"],
+div[data-baseweb="select"] > div,
+.stDateInput > div,
+.stTimeInput > div,
+.stNumberInput > div {
+
+    background-color: #FFFFFF !important;
+
+    border: 1px solid #CBD5E1 !important;
+
+    border-radius: 8px !important;
+
+    min-height: 42px;
+
+    transition: 0.2s border ease;
+}
+
+/* focus */
+
+div[data-baseweb="input"]:focus-within,
+div[data-baseweb="base-input"]:focus-within,
+div[data-baseweb="select"] > div:focus-within {
+    border: 1px solid #FACC15 !important;
+    box-shadow: 0 0 0 1px #FACC15;
+}
+
+
+/* ---------- MULTISELECT TAGS ---------- */
+
+span[data-baseweb="tag"] {
+    background-color: #FEF08A !important;
+    color: #1E293B !important;
+    border-radius: 6px !important;
+}
+
+
+/* ---------- BUTTON ---------- */
+
+.stButton > button {
+
+    background-color: #FACC15 !important;
+
+    color: #000 !important;
+
+    font-weight: 700;
+
+    border-radius: 8px;
+
+    border: none;
+
+    height: 44px;
+
+    transition: 0.2s;
+}
+
+.stButton > button:hover {
+
+    background-color: #EAB308 !important;
+
+    transform: translateY(-1px);
+
+}
+
+
+/* ---------- METRICS ---------- */
+
+[data-testid="stMetricValue"] {
+
+    color: #16A34A;
+
+    font-weight: 800;
+
+    font-size: 28px;
+
+}
+
+[data-testid="stMetricLabel"] {
+
+    font-weight: 600;
+
+    color: #475569;
+
+}
+
+
+/* ---------- DATA EDITOR ---------- */
+
+[data-testid="stDataEditor"] {
+
+    border-radius: 10px;
+
+    border: 1px solid #E2E8F0;
+
+}
+
+
+/* ---------- DIVIDERS ---------- */
+
+hr {
+
+    border-color: #E2E8F0;
+
+}
+
+</style>
 """, unsafe_allow_html=True)
 
 @st.cache_resource
@@ -326,4 +426,5 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
 
