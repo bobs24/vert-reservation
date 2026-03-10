@@ -17,34 +17,25 @@ st.set_page_config(
 # --- IMPROVED UI STYLING ---
 st.markdown("""
     <style>
-    /* Main App Background */
+    /* Main Background */
     .stApp {
         background-color: #F8FAFC !important;
     }
-    
-    /* Typography & Headers */
-    h1, h2, h3 {
-        color: #1A202C !important;
-        font-family: 'Inter', sans-serif;
-    }
 
-    /* Standard Text Styling */
-    p, label, .stMarkdown {
-        color: #4A5568 !important;
-        font-size: 1.05rem !important;
-    }
-
-    /* CLEAN WIDGET LABELS - No Box, No Background */
-    [data-testid="stWidgetLabel"] p {
-        color: #1A202C !important;
+    /* 1. THE BOX KILLER - This targets all labels and removes any background/border */
+    label, [data-testid="stWidgetLabel"], [data-testid="stWidgetLabel"] p, [data-testid="stWidgetLabel"] div {
+        background-color: transparent !important;
+        background: none !important;
+        border: none !important;
+        padding: 0 !important;
+        margin-bottom: 4px !important;
+        color: #1A202C !important; /* Solid dark text */
         font-size: 1rem !important;
         font-weight: 700 !important;
-        background-color: transparent !important;
-        padding: 0 !important;
-        margin-bottom: 5px !important;
+        box-shadow: none !important;
     }
-    
-    /* INPUT BOXES - White with subtle borders */
+
+    /* 2. INPUT FIELDS - Keep these boxed and clean */
     div[data-baseweb="select"] > div, 
     div[data-baseweb="base-input"], 
     div[data-baseweb="input"],
@@ -52,73 +43,31 @@ st.markdown("""
         background-color: #FFFFFF !important;
         border: 1px solid #CBD5E0 !important;
         border-radius: 8px !important;
-        transition: all 0.2s ease-in-out;
     }
 
-    /* Input Focus State */
-    div[data-baseweb="base-input"]:focus-within {
-        border: 2px solid #FFD700 !important;
-        box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2) !important;
-    }
-
-    /* Listbox/Dropdown Styling */
-    div[role="listbox"] ul li {
-        color: #1A202C !important;
-        background-color: #FFFFFF !important;
-    }
-
-    /* HIGH-CONTRAST YELLOW BUTTONS */
+    /* 3. THE BUTTONS - High contrast yellow */
     .stButton > button {
         background-color: #FFD700 !important; 
         color: #000000 !important;
         border-radius: 8px !important;
         font-weight: 800 !important;
-        font-size: 1.1rem !important;
-        padding: 0.6rem 1.5rem !important;
-        width: 100% !important;
-        border: 1.5px solid #E6C200 !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        border: 2px solid #E6C200 !important;
     }
     
     .stButton > button:hover {
         background-color: #FFC107 !important;
-        border-color: #CCAC00 !important;
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
 
-    /* Metric Card Styling */
-    div[data-testid="stMetric"] {
-        background-color: #FFFFFF;
-        border: 1px solid #EDF2F7;
-        padding: 20px;
-        border-radius: 12px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-
-    div[data-testid="stMetricValue"] {
-        color: #12784A !important;
+    /* Clean up headers */
+    h1, h2, h3 {
+        color: #1A202C !important;
         font-weight: 800 !important;
     }
 
-    /* Tab Styling */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 24px;
-    }
-
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: transparent;
-        border-radius: 4px 4px 0 0;
-        gap: 1px;
-        font-weight: 600;
-    }
-
-    .stTabs [aria-selected="true"] {
+    /* Metrics */
+    div[data-testid="stMetricValue"] {
         color: #12784A !important;
-        border-bottom: 3px solid #12784A !important;
+        font-weight: 800 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -377,3 +326,4 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
