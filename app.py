@@ -20,10 +20,18 @@ st.markdown("""
         background-color: #F4F6F8 !important;
     }
     
-    p, label, .stMarkdown, [data-testid="stWidgetLabel"] p {
+    p, label, .stMarkdown {
         color: #2D3748 !important;
         font-size: 1.1rem !important;
         font-weight: 600 !important;
+    }
+
+    [data-testid="stWidgetLabel"] p {
+        color: #2D3748 !important;
+        font-size: 1rem !important;
+        font-weight: 700 !important;
+        background-color: transparent !important;
+        padding: 0 !important;
     }
     
     h1, h2, h3 {
@@ -56,18 +64,19 @@ st.markdown("""
     }
 
     .stButton > button {
-        background-color: #12784A !important;
-        color: #37edea !important;
+        background-color: #FFD700 !important; /* Vivid Yellow */
+        color: #000000 !important;           /* Black text for contrast */
         border-radius: 6px !important;
-        font-weight: bold !important;
+        font-weight: 800 !important;
         font-size: 1.2rem !important;
         padding: 0.75rem !important;
         width: 100% !important;
-        border: none !important;
+        border: 2px solid #CCAC00 !important; /* Darker yellow border */
     }
     
     .stButton > button:hover {
-        background-color: #19f700 !important;
+        background-color: #FFC107 !important; /* Slightly darker on hover */
+        color: #000000 !important;
     }
     
     div[data-baseweb="input"] > div:after {
@@ -336,4 +345,5 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
 
