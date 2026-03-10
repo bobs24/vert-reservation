@@ -15,69 +15,66 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. CSS OVERRIDES (FORCE UNIFORMITY) ---
+# --- 2. CSS OVERRIDES (VERT PREMIUM UI) ---
 st.markdown("""
     <style>
-    /* 1. GLOBAL BACKGROUND & TEXT */
+    /* 1. GLOBAL BACKGROUND & BASE TEXT */
     .stApp {
-        background-color: #F4F6F8; /* Light Grey Background */
-        color: #654321; /* Dark Brown Text */
+        background-color: #F4F6F8 !important; /* Your light grey */
+        color: #4A321F !important; /* Deepened your brown for legibility */
         font-family: 'Inter', sans-serif;
     }
 
-    /* 2. FORCE ALL INPUTS TO BE WHITE WITH BLACK TEXT */
-    input {
+    /* 2. CARD EFFECT FOR INPUTS */
+    input, div[data-baseweb="base-input"], div[data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
-        color: #000000 !important; 
+        color: #1A1A1A !important;
+        border: 1px solid #D1D5DB !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
     }
     
-    div[data-baseweb="select"] > div, 
-    div[data-baseweb="base-input"], 
-    div[data-baseweb="input"] {
-        background-color: #FFFFFF !important;
-        color: #000000 !important;
-        border-color: #E0E0E0 !important;
-    }
-    
-    div[data-baseweb="select"] span {
-        color: #000000 !important;
-    }
-    
-    div[data-baseweb="select"] svg {
-        fill: #555555 !important;
-    }
-
-    /* 3. LABELS */
+    /* 3. LABELS - VERT GREEN */
     .stMarkdown label, .stSelectbox label, .stTextInput label, .stDateInput label, .stTimeInput label, .stNumberInput label, .stMultiSelect label {
         color: #12784A !important;
-        font-weight: 700 !important;
-        font-size: 1rem !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        font-size: 0.8rem !important;
     }
 
-    /* 4. BUTTONS */
-    .stButton > button {
-        background-color: #888888 !important;
-        color: #FFFFFF !important;
-        border: none !important;
-        font-weight: bold;
-    }
-    
-    /* 5. REMOVE WEIRD SPACING AT TOP */
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
-            
-    /* 6. TAB STYLING */
+    /* 4. TABS - MODERN & FLAT */
     button[data-baseweb="tab"] {
-        color: #000000 !important;
+        color: #654321 !important; /* Your Brown */
         font-weight: 600 !important;
+        border: none !important;
     }
-    
     button[data-baseweb="tab"][aria-selected="true"] {
-        color: #0000FF !important;
-        border-bottom-color: #12784A !important; 
-        background-color: transparent !important;
+        color: #12784A !important; /* Green instead of Blue */
+        border-bottom: 3px solid #12784A !important;
+        background-color: rgba(18, 120, 74, 0.05) !important;
+    }
+
+    /* 5. BUTTONS - SMOOTH & DARK GREY */
+    .stButton > button {
+        background-color: #374151 !important;
+        color: #FFFFFF !important;
+        border-radius: 8px !important;
+        padding: 0.5rem 2rem !important;
+        border: none !important;
+        transition: all 0.3s ease;
+    }
+    .stButton > button:hover {
+        background-color: #12784A !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    /* 6. METRIC CARDS STYLE */
+    [data-testid="stMetric"] {
+        background-color: #FFFFFF;
+        padding: 15px !important;
+        border-radius: 12px;
+        border: 1px solid #E5E7EB;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -339,3 +336,4 @@ with tab2:
                 st.rerun()
     else:
         st.info("No activity for this date. The grid above is open for bookings.")
+
