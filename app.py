@@ -16,72 +16,83 @@ st.set_page_config(
 
 st.markdown("""
     <style>
+    /* Global Background */
     .stApp {
-        background-color: #F4F6F8 !important;
+        background-color: #F8FAFC !important;
     }
     
-    p, label, .stMarkdown, [data-testid="stWidgetLabel"] p {
-        color: #2D3748 !important;
-        font-size: 1.1rem !important;
-        font-weight: 600 !important;
+    /* SECTION HEADERS */
+    h3 {
+        color: #1A202C !important;
+        background: #E2E8F0;
+        padding: 8px 15px;
+        border-radius: 8px;
+        display: inline-block;
+        font-size: 1.2rem !important;
+        margin-bottom: 20px !important;
+        border-left: 5px solid #12784A;
+    }
+
+    /* LABEL BOXES - Creating a 'Chip' look for every label */
+    [data-testid="stWidgetLabel"] p {
+        background-color: #12784A !important;
+        color: white !important;
+        padding: 2px 10px !important;
+        border-radius: 4px !important;
+        font-size: 0.9rem !important;
+        width: fit-content !important;
+        margin-bottom: 8px !important;
+        font-weight: 700 !important;
     }
     
-    h1, h2, h3 {
-        color: #1A202C !important;
-        font-weight: 800 !important;
-    }
-
-    input, 
-    div[data-baseweb="base-input"] input, 
-    div[data-baseweb="select"] span, 
-    div[data-baseweb="select"] div {
-        color: #1A202C !important;
-        -webkit-text-fill-color: #1A202C !important;
-        font-size: 1.1rem !important;
-    }
-
+    /* INPUT BOXES - Clean, defined borders */
     div[data-baseweb="select"] > div, 
     div[data-baseweb="base-input"], 
     div[data-baseweb="input"],
     .stTextInput div, .stNumberInput div, .stDateInput div {
-        background-color: transparent !important;
-        border: none !important;
-        border-bottom: 2px solid #12784A !important;
-        border-radius: 0px !important;
-        box-shadow: none !important;
-    }
-
-    div[role="listbox"] ul li, div[role="listbox"] div {
-        color: #1A202C !important;
         background-color: #FFFFFF !important;
-        font-size: 1.1rem !important;
+        border: 1px solid #CBD5E0 !important;
+        border-radius: 6px !important;
+        padding: 2px !important;
     }
 
-    .stButton > button {
-        background-color: #FFC107 !important;
+    /* Focus state for inputs */
+    div[data-baseweb="base-input"]:focus-within {
+        border: 2px solid #12784A !important;
+    }
+
+    /* TYPEFACE */
+    input, span, div {
         color: #1A202C !important;
-        border-radius: 6px !important;
-        font-weight: 900 !important;
+        font-size: 1.05rem !important;
+    }
+
+    /* HIGH CONTRAST YELLOW BUTTONS */
+    .stButton > button {
+        background-color: #FFD700 !important; /* Vivid Golden Yellow */
+        color: #000000 !important;
+        border-radius: 8px !important;
+        font-weight: 800 !important;
         font-size: 1.2rem !important;
-        padding: 0.75rem !important;
-        width: 100% !important;
-        border: none !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        height: 3.5rem !important;
+        border: 2px solid #DAA520 !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+        transition: all 0.2s ease;
     }
     
     .stButton > button:hover {
-        background-color: #E0A800 !important;
-        color: #000000 !important;
-    }
-    
-    div[data-baseweb="input"] > div:after {
-        display: none !important;
+        background-color: #FFC107 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2) !important;
     }
 
-    div[data-testid="stMetricValue"] {
-        font-size: 2.2rem !important;
-        color: #12784A !important;
-        font-weight: 800 !important;
+    /* METRICS BOXES */
+    div[data-testid="stMetric"] {
+        background-color: white;
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid #E2E8F0;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -154,23 +165,21 @@ st.title("🍽️ Vert Reservation Manager")
 tab1, tab2 = st.tabs(["📝 NEW BOOKING", "📊 SCHEDULE GRID"])
 
 with tab1:
-    with st.container():
-        st.subheader("📅 Date & Time")
-        c_date, c_pad = st.columns([1, 3])
-        with c_date:
-            res_date = st.date_input("Select Date", min_value=datetime.now())
-        if res_date.weekday() == 0:
-            st.error("⛔ **STOP!** Monday selected. (Venue Closed)")
+    st.subheader("📅 Date & Time")
+    c_date, c_pad = st.columns([1, 3])
+    with c_date:
+        res_date = st.date_input("Select Date", min_value=datetime.now())
+    if res_date.weekday() == 0:
+        st.error("⛔ **STOP!** Monday selected. (Venue Closed)")
 
-    st.markdown("---")
-
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.subheader("👤 Guest Information")
     df_cached = load_data()
     search_options = []
     if not df_cached.empty:
         temp_df = df_cached[["Customer Name", "Phone Number"]].drop_duplicates()
         search_options = (temp_df["Customer Name"].astype(str) + " | " + temp_df["Phone Number"].astype(str)).tolist()
     
-    st.subheader("👤 Guest Information")
     guest_search = st.selectbox("Search by Name or Phone (Suggests Existing)", ["+ Add New Guest"] + sorted(search_options))
     
     val_name = ""
@@ -305,7 +314,7 @@ with tab2:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    st.markdown("### 📋 Status Management")
+    st.subheader("📋 Status Management")
     
     if not df_day.empty:
         edited_df = st.data_editor(
