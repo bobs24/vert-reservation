@@ -44,6 +44,27 @@ h2, h3 {
     color: #1E293B !important;
 }
 
+/* ---------- TABS (NEW BOOKING / SCHEDULE GRID) ---------- */
+
+button[data-baseweb="tab"] {
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    color: #334155 !important;
+    padding: 10px 18px !important;
+}
+
+/* active tab */
+
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #0F172A !important;
+    border-bottom: 3px solid #FACC15 !important;
+}
+
+/* hover */
+
+button[data-baseweb="tab"]:hover {
+    color: #000000 !important;
+}
 
 /* ---------- LABELS ---------- */
 
@@ -453,6 +474,7 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
 
 
 
