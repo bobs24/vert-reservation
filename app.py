@@ -15,51 +15,47 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. CSS OVERRIDES (FIXED CONTRAST) ---
+# --- 2. CSS OVERRIDES (CLEAN & VISIBLE) ---
 st.markdown("""
     <style>
-    /* 1. BACKGROUND */
+    /* 1. APP BACKGROUND */
     .stApp {
         background-color: #F4F6F8 !important;
     }
 
-    /* 2. FORCE TEXT TO BE VISIBLE (BROWN/BLACK) */
-    /* This fixes the white-on-white text in your screenshot */
+    /* 2. MAIN TEXT CONTRAST (BROWN) */
     .stApp, .stApp p, .stApp label, .stMarkdown, [data-testid="stWidgetLabel"] p {
         color: #4A321F !important;
         font-weight: 700 !important;
     }
 
-    /* 3. FIX THE "BLACK BOX" ISSUE */
-    /* Your screenshot shows dark select boxes where text is hidden. This fixes it. */
-    div[data-baseweb="select"], div[data-baseweb="input"], input, .stSelectbox div {
+    /* 3. FIX INPUTS (WHITE BOX / BLACK TEXT) */
+    /* We target the specific container so it doesn't break the dropdowns */
+    div[data-baseweb="select"] > div, 
+    div[data-baseweb="base-input"], 
+    div[data-baseweb="input"] {
         background-color: #FFFFFF !important;
         color: #000000 !important;
         border: 1px solid #D1D5DB !important;
     }
-    
-    /* Ensure the text inside the search/dropdown is black */
-    div[role="listbox"] div, span[data-baseweb="select-span"] {
+
+    /* 4. FIX DROPDOWN VISIBILITY */
+    /* This ensures the 'Reserved' and 'Cancelled' list is readable */
+    ul[role="listbox"] li {
         color: #000000 !important;
+        background-color: #FFFFFF !important;
+    }
+    
+    /* 5. LABELS - VERT GREEN */
+    .stMarkdown label, [data-testid="stWidgetLabel"] p {
+        color: #12784A !important;
+        font-weight: 800 !important;
     }
 
-    /* 4. BUTTONS - MAKING SAVE VISIBLE */
-    .stButton > button {
-        background-color: #12784A !important; /* Green for Action */
-        color: #FFFFFF !important;
-        width: 100% !important;
-        font-weight: bold !important;
-        border-radius: 5px !important;
-        height: 3rem !important;
-        border: none !important;
-        margin-top: 10px;
-    }
-    
-    /* 5. DATA EDITOR (Status Management Table) */
-    /* Fixes the black background in the table at the bottom */
-    [data-testid="stDataEditor"] {
-        background-color: #FFFFFF !important;
-        border-radius: 8px;
+    /* 6. HIDE THE GLITCH LINE */
+    /* This removes that vertical line you saw in your previous screenshot */
+    div[data-baseweb="input"] > div:after {
+        display: none !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -270,10 +266,17 @@ with tab2:
         edited_df = st.data_editor(
             df_day[["Status", "Start", "Table", "Customer Name", "Pax", "ID"]].sort_values("Start"),
             column_config={
-                "Status": st.column_config.SelectboxColumn("Status", options=["Reserved", "Cancelled"]),
-                "ID": None # Keeps ID hidden
+                "Status": st.column_config.SelectboxColumn(
+                    "Status", 
+                    options=["Reserved", "Cancelled"],
+                    required=True
+                ),
+                "Start": st.column_config.DatetimeColumn("Time", format="HH:mm"),
+                "ID": None # Hide the ID
             },
-            hide_index=True, use_container_width=True, key="status_editor_v5"
+            hide_index=True, 
+            use_container_width=True, 
+            key="status_editor_vFinal"
         )
 
         # THE SAVE BUTTON (Make sure it is indented correctly!)
@@ -294,3 +297,4 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
