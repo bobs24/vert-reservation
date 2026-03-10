@@ -15,51 +15,51 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. CSS OVERRIDES (FORCE CONTRAST & FULL WIDTH) ---
+# --- 2. CSS OVERRIDES (FIXED CONTRAST) ---
 st.markdown("""
     <style>
-    /* 1. FORCE BACKGROUND & TEXT CONTRAST */
+    /* 1. BACKGROUND */
     .stApp {
         background-color: #F4F6F8 !important;
     }
 
-    /* Target every possible text element to be Dark Brown */
-    .stApp, .stApp p, .stApp div, .stApp span, .stApp label {
-        color: #4A321F !important; 
+    /* 2. FORCE TEXT TO BE VISIBLE (BROWN/BLACK) */
+    /* This fixes the white-on-white text in your screenshot */
+    .stApp, .stApp p, .stApp label, .stMarkdown, [data-testid="stWidgetLabel"] p {
+        color: #4A321F !important;
+        font-weight: 700 !important;
     }
 
-    /* 2. FIX INPUT BOXES (ENLARGE & FILL) */
-    div[data-baseweb="input"], div[data-baseweb="select"], .stTextInput input {
+    /* 3. FIX THE "BLACK BOX" ISSUE */
+    /* Your screenshot shows dark select boxes where text is hidden. This fixes it. */
+    div[data-baseweb="select"], div[data-baseweb="input"], input, .stSelectbox div {
         background-color: #FFFFFF !important;
         color: #000000 !important;
         border: 1px solid #D1D5DB !important;
-        width: 100% !important; /* Forces box to fill the column */
-        border-radius: 4px !important;
+    }
+    
+    /* Ensure the text inside the search/dropdown is black */
+    div[role="listbox"] div, span[data-baseweb="select-span"] {
+        color: #000000 !important;
     }
 
-    /* 3. LABELS - VERT GREEN */
-    .stMarkdown label, [data-testid="stWidgetLabel"] p {
-        color: #12784A !important;
-        font-weight: 800 !important;
-        font-size: 0.9rem !important;
-    }
-
-    /* 4. BUTTONS - LARGE & VISIBLE */
+    /* 4. BUTTONS - MAKING SAVE VISIBLE */
     .stButton > button {
-        width: 100% !important;
-        background-color: #4A321F !important;
+        background-color: #12784A !important; /* Green for Action */
         color: #FFFFFF !important;
+        width: 100% !important;
+        font-weight: bold !important;
         border-radius: 5px !important;
-        border: none !important;
         height: 3rem !important;
+        border: none !important;
+        margin-top: 10px;
     }
-
-    /* 5. TAB STYLING */
-    button[data-baseweb="tab"] p {
-        color: #4A321F !important;
-    }
-    button[data-baseweb="tab"][aria-selected="true"] {
-        border-bottom-color: #12784A !important;
+    
+    /* 5. DATA EDITOR (Status Management Table) */
+    /* Fixes the black background in the table at the bottom */
+    [data-testid="stDataEditor"] {
+        background-color: #FFFFFF !important;
+        border-radius: 8px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -218,80 +218,79 @@ with tab1:
                     st.rerun()
 
 with tab2:
-    # --- Top Bar ---
-    col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
+    # Top Filter
+    col_f1, _ = st.columns([1, 2])
     with col_f1:
-        view_date = st.date_input("📅 View Schedule For", datetime.now(), key="v_date_final_fix")
+        view_date = st.date_input("📅 View Schedule For", datetime.now(), key="grid_view_final")
 
     df = load_data()
     df_day = df[df['Start'].dt.date == view_date].copy() if not df.empty else pd.DataFrame()
-    confirmed = df_day[df_day['Status'] == 'Reserved'] if not df_day.empty else pd.DataFrame()
-
-    # --- Permanent Gantt Chart ---
+    
+    # 1. GANTT CHART LOGIC
     start_view = datetime.combine(view_date, time(10, 0))
     end_view = datetime.combine(view_date, time(23, 0))
     all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
 
-    # Skeleton Construction
-    skeleton_df = pd.DataFrame([{"Table": t, "Start": start_view, "End": start_view, "IsDummy": True, "Customer Name": ""} for t in all_tables])
+    # Filter out cancelled for chart only
+    confirmed = df_day[df_day['Status'] == 'Reserved'] if not df_day.empty else pd.DataFrame()
+
+    # Permanent Grid Skeleton
+    skeleton_df = pd.DataFrame([{"Table": t, "Start": start_view, "End": start_view, "IsDummy": True} for t in all_tables])
 
     if not confirmed.empty:
-        plot_df = confirmed.copy()
-        plot_df = plot_df.assign(Table=plot_df['Table'].str.split(', ')).explode('Table')
+        plot_df = confirmed.assign(Table=confirmed['Table'].str.split(', ')).explode('Table')
         plot_df['IsDummy'] = False
         final_plot_df = pd.concat([skeleton_df, plot_df], ignore_index=True)
     else:
         final_plot_df = skeleton_df
 
-    # Create Figure with STRICT hover removal
     fig = px.timeline(
-        final_plot_df, 
-        x_start="Start", x_end="End", y="Table", 
-        hover_name="Customer Name",
-        color="IsDummy",
-        color_discrete_map={True: "rgba(0,0,0,0)", False: "#12784A"}
+        final_plot_df, x_start="Start", x_end="End", y="Table",
+        color="IsDummy", color_discrete_map={True: "rgba(0,0,0,0)", False: "#12784A"},
+        hover_name="Customer Name" if "Customer Name" in final_plot_df.columns else None
     )
 
-    # REMOVE IS_DUMMY FROM HOVER COMPLETELY
-    fig.update_traces(
-        hovertemplate="<b>%{hovertext}</b><br>Time: %{base|%H:%M} - %{x|%H:%M}<extra></extra>",
-        selector=dict(name="False") # Only show hover for actual bookings
-    )
-    fig.update_traces(hoverinfo='none', selector=dict(name="True")) # Disable hover for skeleton
+    # REMOVE IS_DUMMY FROM HOVER
+    fig.update_traces(hovertemplate="<b>%{hovertext}</b><br>%{base|%H:%M} - %{x|%H:%M}<extra></extra>", selector=dict(name="False"))
+    fig.update_traces(hoverinfo='none', selector=dict(name="True"))
 
     fig.update_layout(
         xaxis_range=[start_view, end_view],
-        xaxis=dict(
-            tickformat="%H:%M", dtick=3600000, 
-            gridcolor="#D1D5DB", side="top", title="", 
-            tickfont=dict(color="#4A321F", size=12) 
-        ),
-        yaxis=dict(
-            categoryorder="array", categoryarray=all_tables[::-1], 
-            gridcolor="#D1D5DB", title="", 
-            tickfont=dict(color="#4A321F", size=12) 
-        ),
-        plot_bgcolor="white",
-        paper_bgcolor="rgba(0,0,0,0)",
-        height=500,
-        margin=dict(l=10, r=10, t=40, b=10),
-        showlegend=False,
-        font=dict(color="#4A321F") # Force chart text to Dark Brown
+        xaxis=dict(tickformat="%H:%M", gridcolor="#E0E0E0", side="top", title="", tickfont=dict(color="#4A321F")),
+        yaxis=dict(categoryorder="array", categoryarray=all_tables[::-1], gridcolor="#E0E0E0", title="", tickfont=dict(color="#4A321F")),
+        plot_bgcolor="white", paper_bgcolor="rgba(0,0,0,0)", height=500, showlegend=False
     )
+    st.plotly_chart(fig, use_container_width=True)
 
-    st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-
-    # --- Management Editor ---
+    # 2. STATUS MANAGEMENT (The Editor & Save Button)
     st.markdown("### 📋 Status Management")
+    
     if not df_day.empty:
-        st.data_editor(
+        # We use key="editor_key" to ensure changes are tracked
+        edited_df = st.data_editor(
             df_day[["Status", "Start", "Table", "Customer Name", "Pax", "ID"]].sort_values("Start"),
             column_config={
                 "Status": st.column_config.SelectboxColumn("Status", options=["Reserved", "Cancelled"]),
-                "Start": st.column_config.DatetimeColumn("Time", format="HH:mm"),
-                "ID": None
+                "ID": None # Keeps ID hidden
             },
-            hide_index=True, use_container_width=True, key="editor_fix_final"
+            hide_index=True, use_container_width=True, key="status_editor_v5"
         )
 
-
+        # THE SAVE BUTTON (Make sure it is indented correctly!)
+        if st.button("💾 SAVE CHANGES"):
+            changes = {}
+            for i, row in edited_df.iterrows():
+                # Find original status to check for changes
+                orig = df_day.loc[df_day['ID'] == row['ID'], 'Status'].values[0]
+                if row['Status'] != orig:
+                    changes[row['ID']] = row['Status']
+            
+            if changes:
+                update_status_batch(changes)
+                st.success("Changes Saved!")
+                st.cache_resource.clear()
+                st.rerun()
+            else:
+                st.info("No changes to save.")
+    else:
+        st.info("No reservations for this date.")
