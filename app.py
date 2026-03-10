@@ -7,7 +7,6 @@ import plotly.graph_objects as go
 import uuid
 import plotly.express as px
 
-# --- 1. PAGE CONFIGURATION ---
 st.set_page_config(
     page_title="Vert Reservation Manager", 
     layout="wide", 
@@ -15,68 +14,75 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. CSS OVERRIDES (STRICT VISIBILITY) ---
 st.markdown("""
     <style>
-    /* 1. APP BACKGROUND */
     .stApp {
         background-color: #F4F6F8 !important;
     }
-
-    /* 2. LABELS & HEADERS (VERT GREEN & BROWN) */
-    .stApp p, .stApp label, .stMarkdown, [data-testid="stWidgetLabel"] p {
-        color: #4A321F !important;
-        font-weight: 700 !important;
+    
+    p, label, .stMarkdown, [data-testid="stWidgetLabel"] p {
+        color: #2D3748 !important;
+        font-size: 1.1rem !important;
+        font-weight: 600 !important;
     }
     
-    .stMarkdown label {
-        color: #12784A !important;
+    h1, h2, h3 {
+        color: #1A202C !important;
+        font-weight: 800 !important;
     }
 
-    /* 3. INPUT BOXES & TEXT COLOR (FORCING CONTRAST) */
-    /* This targets the actual text typed into the boxes */
     input, 
     div[data-baseweb="base-input"] input, 
     div[data-baseweb="select"] span, 
     div[data-baseweb="select"] div {
-        color: #000000 !important; /* Force text to Black */
-        -webkit-text-fill-color: #000000 !important; /* Fix for some browsers */
+        color: #1A202C !important;
+        -webkit-text-fill-color: #1A202C !important;
+        font-size: 1.1rem !important;
     }
 
-    /* White Background for all input fields */
     div[data-baseweb="select"] > div, 
     div[data-baseweb="base-input"], 
     div[data-baseweb="input"],
     .stTextInput div, .stNumberInput div, .stDateInput div {
         background-color: #FFFFFF !important;
-        border: 1px solid #D1D5DB !important;
-        border-radius: 8px !important;
+        border: 2px solid #CBD5E0 !important;
+        border-radius: 6px !important;
     }
 
-    /* 4. FIX DROPDOWN TEXT (Reserved/Cancelled/Tables) */
-    /* This ensures the items in the popup list are also black */
     div[role="listbox"] ul li, div[role="listbox"] div {
-        color: #000000 !important;
+        color: #1A202C !important;
         background-color: #FFFFFF !important;
+        font-size: 1.1rem !important;
     }
 
-    /* 5. BUTTONS */
     .stButton > button {
         background-color: #12784A !important;
         color: #FFFFFF !important;
-        border-radius: 8px !important;
+        border-radius: 6px !important;
         font-weight: bold !important;
+        font-size: 1.2rem !important;
+        padding: 0.75rem !important;
         width: 100% !important;
+        border: none !important;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     
-    /* Remove weird focus lines */
+    .stButton > button:hover {
+        background-color: #0E5A37 !important;
+    }
+    
     div[data-baseweb="input"] > div:after {
         display: none !important;
+    }
+
+    div[data-testid="stMetricValue"] {
+        font-size: 2.2rem !important;
+        color: #12784A !important;
+        font-weight: 800 !important;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- 3. DATABASE CONNECTION ---
 @st.cache_resource
 def get_connection():
     try:
@@ -93,7 +99,6 @@ def get_connection():
 
 SHEET_ID = '1eUi8Neog9mXb5J17G3WTvCehtR0Bz3-mKkw49gG8tAE'
 
-# --- 4. DATA FUNCTIONS ---
 def load_data():
     client = get_connection()
     if not client: return pd.DataFrame()
@@ -101,7 +106,6 @@ def load_data():
         sheet = client.open_by_key(SHEET_ID).sheet1
         data = sheet.get_all_records()
         df = pd.DataFrame(data)
-        # UPDATED: Added Phone Number to expected columns
         expected_cols = ["Table", "Customer Name", "Phone Number", "Start", "End", "Status", "ID", "Notes", "Pax"]
         for col in expected_cols:
             if col not in df.columns: df[col] = ""
@@ -115,14 +119,13 @@ def add_reservation(payload):
     client = get_connection()
     sheet = client.open_by_key(SHEET_ID).sheet1
     if not sheet.row_values(1):
-        # UPDATED: Added Phone Number
         sheet.append_row(["Table", "Customer Name", "Phone Number", "Start", "End", "Status", "ID", "Notes", "Pax"])
 
     table_str = ", ".join(payload["Table"])
     sheet.append_row([
         table_str, 
         payload["Customer Name"], 
-        payload["Phone Number"], # NEW COLUMN
+        payload["Phone Number"],
         str(payload["Start"]), 
         str(payload["End"]), 
         payload["Status"], 
@@ -134,23 +137,19 @@ def add_reservation(payload):
 def update_status_batch(changes_dict):
     client = get_connection()
     sheet = client.open_by_key(SHEET_ID).sheet1
-    id_list = sheet.col_values(7) # ID shifted to 7th column
+    id_list = sheet.col_values(7)
     updates = []
     for row_id, new_status in changes_dict.items():
         try:
             row_num = id_list.index(row_id) + 1
-            updates.append({'range': f'F{row_num}', 'values': [[new_status]]}) # Status shifted to F
+            updates.append({'range': f'F{row_num}', 'values': [[new_status]]})
         except: continue
     if updates: sheet.batch_update(updates)
 
-# --- 5. MAIN UI ---
 st.title("🍽️ Vert Reservation Manager")
 
 tab1, tab2 = st.tabs(["📝 NEW BOOKING", "📊 SCHEDULE GRID"])
 
-# ==========================================
-# TAB 1: FORM (Clean Layout)
-# ==========================================
 with tab1:
     with st.container():
         st.subheader("📅 Date & Time")
@@ -162,19 +161,15 @@ with tab1:
 
     st.markdown("---")
 
-    # --- NEW LOGIC: Relationship Search ---
     df_cached = load_data()
     search_options = []
     if not df_cached.empty:
-        # Create a searchable string "Name | Phone"
         temp_df = df_cached[["Customer Name", "Phone Number"]].drop_duplicates()
         search_options = (temp_df["Customer Name"].astype(str) + " | " + temp_df["Phone Number"].astype(str)).tolist()
     
     st.subheader("👤 Guest Information")
-    # This acts as the "search-as-you-type" relationship field
     guest_search = st.selectbox("Search by Name or Phone (Suggests Existing)", ["+ Add New Guest"] + sorted(search_options))
     
-    # Logic to pre-fill based on search
     val_name = ""
     val_phone = ""
     if guest_search != "+ Add New Guest":
@@ -230,7 +225,6 @@ with tab1:
                     st.rerun()
 
 with tab2:
-    # Top Filter
     col_f1, _ = st.columns([1, 2])
     with col_f1:
         view_date = st.date_input("📅 View Schedule For", datetime.now(), key="grid_view_final")
@@ -238,19 +232,32 @@ with tab2:
     df = load_data()
     df_day = df[df['Start'].dt.date == view_date].copy() if not df.empty else pd.DataFrame()
     
-    # 1. GANTT CHART LOGIC
     start_view = datetime.combine(view_date, time(10, 0))
     end_view = datetime.combine(view_date, time(23, 0))
     all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
 
-    # Filter out cancelled for chart only
     confirmed = df_day[df_day['Status'] == 'Reserved'] if not df_day.empty else pd.DataFrame()
 
-    # Permanent Grid Skeleton
-    skeleton_df = pd.DataFrame([{"Table": t, "Start": start_view, "End": start_view, "IsDummy": True} for t in all_tables])
-
+    total_res = len(confirmed)
+    total_pax = confirmed['Pax'].sum() if not confirmed.empty else 0
+    
     if not confirmed.empty:
         plot_df = confirmed.assign(Table=confirmed['Table'].str.split(', ')).explode('Table')
+        active_tables = plot_df['Table'].nunique()
+    else:
+        plot_df = pd.DataFrame()
+        active_tables = 0
+
+    st.markdown("### 📈 Daily Summary")
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Active Reservations", total_res)
+    m2.metric("Total Pax", int(total_pax))
+    m3.metric("Tables Occupied", active_tables)
+    st.markdown("---")
+
+    skeleton_df = pd.DataFrame([{"Table": t, "Start": start_view, "End": start_view, "IsDummy": True} for t in all_tables])
+
+    if not plot_df.empty:
         plot_df['IsDummy'] = False
         final_plot_df = pd.concat([skeleton_df, plot_df], ignore_index=True)
     else:
@@ -258,27 +265,46 @@ with tab2:
 
     fig = px.timeline(
         final_plot_df, x_start="Start", x_end="End", y="Table",
-        color="IsDummy", color_discrete_map={True: "rgba(0,0,0,0)", False: "#12784A"},
+        color="IsDummy", color_discrete_map={True: "rgba(0,0,0,0)", False: "#17A363"},
         hover_name="Customer Name" if "Customer Name" in final_plot_df.columns else None
     )
 
-    # REMOVE IS_DUMMY FROM HOVER
-    fig.update_traces(hovertemplate="<b>%{hovertext}</b><br>%{base|%H:%M} - %{x|%H:%M}<extra></extra>", selector=dict(name="False"))
+    fig.update_traces(
+        hovertemplate="<br><b>%{hovertext}</b><br>%{base|%H:%M} - %{x|%H:%M}<extra></extra>", 
+        selector=dict(name="False"),
+        marker_line_color='rgb(8,48,107)',
+        marker_line_width=1.5,
+        opacity=0.95
+    )
     fig.update_traces(hoverinfo='none', selector=dict(name="True"))
 
     fig.update_layout(
         xaxis_range=[start_view, end_view],
-        xaxis=dict(tickformat="%H:%M", gridcolor="#E0E0E0", side="top", title="", tickfont=dict(color="#4A321F")),
-        yaxis=dict(categoryorder="array", categoryarray=all_tables[::-1], gridcolor="#E0E0E0", title="", tickfont=dict(color="#4A321F")),
-        plot_bgcolor="white", paper_bgcolor="rgba(0,0,0,0)", height=500, showlegend=False
+        xaxis=dict(
+            tickformat="%H:%M", 
+            gridcolor="#CBD5E0", 
+            side="top", 
+            title="", 
+            tickfont=dict(color="#1A202C", size=14, weight="bold")
+        ),
+        yaxis=dict(
+            categoryorder="array", 
+            categoryarray=all_tables[::-1], 
+            gridcolor="#CBD5E0", 
+            title="", 
+            tickfont=dict(color="#1A202C", size=14, weight="bold")
+        ),
+        plot_bgcolor="#FFFFFF", 
+        paper_bgcolor="rgba(0,0,0,0)", 
+        height=550, 
+        showlegend=False,
+        margin=dict(l=0, r=0, t=40, b=0)
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # 2. STATUS MANAGEMENT (The Editor & Save Button)
     st.markdown("### 📋 Status Management")
     
     if not df_day.empty:
-        # We use key="editor_key" to ensure changes are tracked
         edited_df = st.data_editor(
             df_day[["Status", "Start", "Table", "Customer Name", "Pax", "ID"]].sort_values("Start"),
             column_config={
@@ -288,18 +314,16 @@ with tab2:
                     required=True
                 ),
                 "Start": st.column_config.DatetimeColumn("Time", format="HH:mm"),
-                "ID": None # Hide the ID
+                "ID": None
             },
             hide_index=True, 
             use_container_width=True, 
             key="status_editor_vFinal"
         )
 
-        # THE SAVE BUTTON (Make sure it is indented correctly!)
         if st.button("💾 SAVE CHANGES"):
             changes = {}
             for i, row in edited_df.iterrows():
-                # Find original status to check for changes
                 orig = df_day.loc[df_day['ID'] == row['ID'], 'Status'].values[0]
                 if row['Status'] != orig:
                     changes[row['ID']] = row['Status']
@@ -313,5 +337,3 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
-
-
