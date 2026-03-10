@@ -27,7 +27,7 @@ st.markdown("""
     }
 
     [data-testid="stWidgetLabel"] p {
-        color: #2D3748 !important;
+        color: #FFFFFF !important;
         font-size: 1rem !important;
         font-weight: 700 !important;
         background-color: transparent !important;
@@ -345,5 +345,6 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
 
 
