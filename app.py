@@ -14,79 +14,111 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# --- IMPROVED UI STYLING ---
 st.markdown("""
     <style>
+    /* Main App Background */
     .stApp {
-        background-color: #F4F6F8 !important;
+        background-color: #F8FAFC !important;
     }
     
-    p, label, .stMarkdown {
-        color: #2D3748 !important;
-        font-size: 1.1rem !important;
-        font-weight: 600 !important;
+    /* Typography & Headers */
+    h1, h2, h3 {
+        color: #1A202C !important;
+        font-family: 'Inter', sans-serif;
     }
 
+    /* Standard Text Styling */
+    p, label, .stMarkdown {
+        color: #4A5568 !important;
+        font-size: 1.05rem !important;
+    }
+
+    /* CLEAN WIDGET LABELS - No Box, No Background */
     [data-testid="stWidgetLabel"] p {
-        color: #FFFFFF !important;
+        color: #1A202C !important;
         font-size: 1rem !important;
         font-weight: 700 !important;
         background-color: transparent !important;
         padding: 0 !important;
+        margin-bottom: 5px !important;
     }
     
-    h1, h2, h3 {
-        color: #1A202C !important;
-        font-weight: 800 !important;
-    }
-
-    input, 
-    div[data-baseweb="base-input"] input, 
-    div[data-baseweb="select"] span, 
-    div[data-baseweb="select"] div {
-        color: #1A202C !important;
-        -webkit-text-fill-color: #1A202C !important;
-        font-size: 1.05rem !important;
-    }
-
+    /* INPUT BOXES - White with subtle borders */
     div[data-baseweb="select"] > div, 
     div[data-baseweb="base-input"], 
     div[data-baseweb="input"],
     .stTextInput div, .stNumberInput div, .stDateInput div {
         background-color: #FFFFFF !important;
-        border: 2px solid #CBD5E0 !important;
-        border-radius: 6px !important;
+        border: 1px solid #CBD5E0 !important;
+        border-radius: 8px !important;
+        transition: all 0.2s ease-in-out;
     }
 
-    div[role="listbox"] ul li, div[role="listbox"] div {
-        color: #0c1424 !important;
+    /* Input Focus State */
+    div[data-baseweb="base-input"]:focus-within {
+        border: 2px solid #FFD700 !important;
+        box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.2) !important;
+    }
+
+    /* Listbox/Dropdown Styling */
+    div[role="listbox"] ul li {
+        color: #1A202C !important;
         background-color: #FFFFFF !important;
-        font-size: 1.05rem !important;
     }
 
+    /* HIGH-CONTRAST YELLOW BUTTONS */
     .stButton > button {
-        background-color: #FFD700 !important; /* Vivid Yellow */
-        color: #000000 !important;           /* Black text for contrast */
-        border-radius: 6px !important;
+        background-color: #FFD700 !important; 
+        color: #000000 !important;
+        border-radius: 8px !important;
         font-weight: 800 !important;
-        font-size: 1.2rem !important;
-        padding: 0.75rem !important;
+        font-size: 1.1rem !important;
+        padding: 0.6rem 1.5rem !important;
         width: 100% !important;
-        border: 2px solid #CCAC00 !important; /* Darker yellow border */
+        border: 1.5px solid #E6C200 !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     
     .stButton > button:hover {
-        background-color: #FFC107 !important; /* Slightly darker on hover */
-        color: #000000 !important;
+        background-color: #FFC107 !important;
+        border-color: #CCAC00 !important;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-    
-    div[data-baseweb="input"] > div:after {
-        display: none !important;
+
+    /* Metric Card Styling */
+    div[data-testid="stMetric"] {
+        background-color: #FFFFFF;
+        border: 1px solid #EDF2F7;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
     div[data-testid="stMetricValue"] {
-        font-size: 2.2rem !important;
         color: #12784A !important;
         font-weight: 800 !important;
+    }
+
+    /* Tab Styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 24px;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        height: 50px;
+        white-space: pre-wrap;
+        background-color: transparent;
+        border-radius: 4px 4px 0 0;
+        gap: 1px;
+        font-weight: 600;
+    }
+
+    .stTabs [aria-selected="true"] {
+        color: #12784A !important;
+        border-bottom: 3px solid #12784A !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -345,6 +377,3 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
-
-
-
