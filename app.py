@@ -15,7 +15,7 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. CSS OVERRIDES (CLEAN & VISIBLE) ---
+# --- 2. CSS OVERRIDES (STRICT VISIBILITY) ---
 st.markdown("""
     <style>
     /* 1. APP BACKGROUND */
@@ -23,37 +23,53 @@ st.markdown("""
         background-color: #F4F6F8 !important;
     }
 
-    /* 2. MAIN TEXT CONTRAST (BROWN) */
-    .stApp, .stApp p, .stApp label, .stMarkdown, [data-testid="stWidgetLabel"] p {
+    /* 2. LABELS & HEADERS (VERT GREEN & BROWN) */
+    .stApp p, .stApp label, .stMarkdown, [data-testid="stWidgetLabel"] p {
         color: #4A321F !important;
         font-weight: 700 !important;
     }
+    
+    .stMarkdown label {
+        color: #12784A !important;
+    }
 
-    /* 3. FIX INPUTS (WHITE BOX / BLACK TEXT) */
-    /* We target the specific container so it doesn't break the dropdowns */
+    /* 3. INPUT BOXES & TEXT COLOR (FORCING CONTRAST) */
+    /* This targets the actual text typed into the boxes */
+    input, 
+    div[data-baseweb="base-input"] input, 
+    div[data-baseweb="select"] span, 
+    div[data-baseweb="select"] div {
+        color: #000000 !important; /* Force text to Black */
+        -webkit-text-fill-color: #000000 !important; /* Fix for some browsers */
+    }
+
+    /* White Background for all input fields */
     div[data-baseweb="select"] > div, 
     div[data-baseweb="base-input"], 
-    div[data-baseweb="input"] {
+    div[data-baseweb="input"],
+    .stTextInput div, .stNumberInput div, .stDateInput div {
         background-color: #FFFFFF !important;
-        color: #000000 !important;
         border: 1px solid #D1D5DB !important;
+        border-radius: 8px !important;
     }
 
-    /* 4. FIX DROPDOWN VISIBILITY */
-    /* This ensures the 'Reserved' and 'Cancelled' list is readable */
-    ul[role="listbox"] li {
+    /* 4. FIX DROPDOWN TEXT (Reserved/Cancelled/Tables) */
+    /* This ensures the items in the popup list are also black */
+    div[role="listbox"] ul li, div[role="listbox"] div {
         color: #000000 !important;
         background-color: #FFFFFF !important;
+    }
+
+    /* 5. BUTTONS */
+    .stButton > button {
+        background-color: #12784A !important;
+        color: #FFFFFF !important;
+        border-radius: 8px !important;
+        font-weight: bold !important;
+        width: 100% !important;
     }
     
-    /* 5. LABELS - VERT GREEN */
-    .stMarkdown label, [data-testid="stWidgetLabel"] p {
-        color: #12784A !important;
-        font-weight: 800 !important;
-    }
-
-    /* 6. HIDE THE GLITCH LINE */
-    /* This removes that vertical line you saw in your previous screenshot */
+    /* Remove weird focus lines */
     div[data-baseweb="input"] > div:after {
         display: none !important;
     }
@@ -297,4 +313,5 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
 
