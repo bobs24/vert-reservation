@@ -236,142 +236,106 @@ with tab1:
                     st.rerun()
 
 # ==========================================
-# TAB 2: GRID VISUAL
+# TAB 2: GRID VISUAL (Always Visible)
 # ==========================================
 with tab2:
-    # 1. Top Bar: Date Picker & Quick Stats
-    col_f1, col_f2, col_f3, col_f4 = st.columns([2, 1, 1, 1])
-    
+    # --- 1. Top Controls & Metrics ---
+    col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
     with col_f1:
-        view_date = st.date_input("📅 View Schedule For", datetime.now(), key="view_date")
+        view_date = st.date_input("📅 View Schedule For", datetime.now(), key="view_grid_date")
 
-    # Load and filter data
     df = load_data()
-    mask_day = (df['Start'].dt.date == view_date) if not df.empty else pd.Series()
-    df_day = df.loc[mask_day].copy() if not df.empty else pd.DataFrame()
+    df_day = df[df['Start'].dt.date == view_date].copy() if not df.empty else pd.DataFrame()
     
-    # Quick Stats (Metric Cards)
-    active_res = len(df_day[df_day['Status'] == 'Reserved'])
-    total_pax = df_day[df_day['Status'] == 'Reserved']['Pax'].sum()
-    
+    # Simple Metrics
+    confirmed = df_day[df_day['Status'] == 'Reserved'] if not df_day.empty else pd.DataFrame()
     with col_f2:
-        st.metric("Total Bookings", active_res)
+        st.metric("Total Bookings", len(confirmed))
     with col_f3:
-        st.metric("Total Guests", int(total_pax) if total_pax else 0)
-    with col_f4:
-        st.metric("Status", "Open" if view_date.weekday() != 0 else "Closed")
+        st.metric("Total Guests", int(confirmed['Pax'].sum()) if not confirmed.empty else 0)
 
-    # 2. Timeline Grid Styling
+    # --- 2. The Perpetual Grid Logic ---
     start_view = datetime.combine(view_date, time(10, 0))
-    end_view = datetime.combine(view_date, time(23, 0)) # Extended to 11 PM
+    end_view = datetime.combine(view_date, time(23, 0))
     all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
 
-    # Filter out cancelled for the visual grid only
-    df_plot = df_day[df_day['Status'] != 'Cancelled'].copy() if not df_day.empty else pd.DataFrame()
+    # Build Skeleton: This ensures every table shows up even if empty
+    skeleton_data = []
+    for t in all_tables:
+        skeleton_data.append({
+            "Table": t, "Start": start_view, "End": start_view, 
+            "Customer Name": "", "IsDummy": True
+        })
+    skeleton_df = pd.DataFrame(skeleton_data)
 
-    if not df_plot.empty:
-        df_plot = df_plot.assign(Table=df_plot['Table'].str.split(', ')).explode('Table')
+    # Process Actual Data
+    plot_df = confirmed.copy() if not confirmed.empty else pd.DataFrame()
+    if not plot_df.empty:
+        plot_df = plot_df.assign(Table=plot_df['Table'].str.split(', ')).explode('Table')
+        plot_df['IsDummy'] = False
+        # Combine skeleton and actual data
+        final_plot_df = pd.concat([skeleton_df, plot_df], ignore_index=True)
+    else:
+        final_plot_df = skeleton_df
 
-    # Create dummy data to ensure all tables show up even if empty
-    dummy_df = pd.DataFrame({
-        "Table": all_tables, 
-        "Start": [start_view]*len(all_tables), 
-        "End": [start_view]*len(all_tables), 
-        "Customer Name": [""]*len(all_tables)
-    })
-    
-    plot_df = pd.concat([dummy_df, df_plot], ignore_index=True)
-
-    # Professional Plotly Theme
+    # Create Figure
     fig = px.timeline(
-        plot_df, 
-        x_start="Start", 
-        x_end="End", 
-        y="Table", 
+        final_plot_df, 
+        x_start="Start", x_end="End", y="Table", 
         hover_name="Customer Name",
-        hover_data={"Pax": True, "Start": "|%H:%M", "End": "|%H:%M", "Table": False},
-        color_discrete_sequence=["#12784A"] # Vert's Signature Green
+        # Use opacity to hide the skeleton "dots"
+        color="IsDummy",
+        color_discrete_map={True: "rgba(0,0,0,0)", False: "#12784A"}
     )
 
     fig.update_layout(
         xaxis_range=[start_view, end_view],
         xaxis=dict(
-            title="", 
-            tickformat="%H:%M", 
-            dtick=3600000, # Hourly ticks
-            gridcolor="#EBEBEB",
-            side="top" # Move time to top for better readability
+            tickformat="%H:%M", dtick=3600000, 
+            gridcolor="#F0F0F0", side="top", title="",
+            fixedrange=True
         ),
         yaxis=dict(
-            title="", 
-            categoryorder="array", 
-            categoryarray=all_tables[::-1], # Reversed to show Table 1 at top
-            gridcolor="#F0F0F0",
+            categoryorder="array", categoryarray=all_tables[::-1], 
+            gridcolor="#F0F0F0", title="",
             fixedrange=True
         ),
         plot_bgcolor="white",
-        paper_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="white",
         height=500,
-        margin=dict(l=10, r=10, t=40, b=10),
-        showlegend=False,
-        font=dict(family="Inter", size=12, color="#654321")
-    )
-
-    # Round the edges of the reservation bars
-    fig.update_traces(
-        marker_line_color="white", 
-        marker_line_width=2, 
-        opacity=0.85,
-        marker=dict(cornerradius=5) # Smooth corners (Plotly 5.11+)
+        margin=dict(l=10, r=10, t=30, b=10),
+        showlegend=False
     )
     
+    fig.update_traces(marker_line_width=0, selector=dict(name="True")) # Hide skeleton lines
+    fig.update_traces(marker_line_color="white", marker_line_width=2, marker_cornerradius=5, selector=dict(name="False"))
+
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-    # 3. Status Management Section
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader("📋 Booking Management")
+    # --- 3. Status Management ---
+    st.markdown("---")
+    st.subheader("📋 Booking Details")
 
     if not df_day.empty:
-        # Sort by start time
-        df_display = df_day.sort_values("Start")
-        
-        # Modern Data Editor
         edited_df = st.data_editor(
-            df_display[["Status", "Start", "Table", "Customer Name", "Pax", "Phone Number", "Notes", "ID"]],
+            df_day[["Status", "Start", "Table", "Customer Name", "Pax", "ID"]].sort_values("Start"),
             column_config={
-                "Status": st.column_config.SelectboxColumn(
-                    "Status", 
-                    options=["Reserved", "Cancelled"], 
-                    required=True,
-                    help="Update status to reflect walk-ins or cancellations"
-                ),
+                "Status": st.column_config.SelectboxColumn("Status", options=["Reserved", "Cancelled"], required=True),
                 "Start": st.column_config.DatetimeColumn("Time", format="HH:mm"),
-                "Table": st.column_config.TextColumn("Table", disabled=True),
-                "Pax": st.column_config.NumberColumn("Pax", format="%d"),
-                "ID": None, # Hide ID from UI but keep in dataframe
+                "ID": None # Keeps ID hidden from user but available for logic
             },
-            hide_index=True, 
+            hide_index=True,
             use_container_width=True,
-            key="grid_editor"
+            key="grid_editor_v3"
         )
 
-        c_save, c_empty = st.columns([1, 5])
-        with c_save:
-            if st.button("💾 SAVE CHANGES", use_container_width=True):
-                changes = {}
-                for i, row in edited_df.iterrows():
-                    # Compare with original day data
-                    orig_status = df_day.loc[df_day['ID'] == row['ID'], 'Status'].values[0]
-                    if row['Status'] != orig_status:
-                        changes[row['ID']] = row['Status']
-                
-                if changes:
-                    with st.spinner("Updating..."):
-                        update_status_batch(changes)
-                        st.cache_resource.clear()
-                        st.rerun()
-                else:
-                    st.info("No changes detected.")
+        if st.button("💾 SAVE CHANGES"):
+            changes = {row['ID']: row['Status'] for _, row in edited_df.iterrows() 
+                       if row['Status'] != df_day.loc[df_day['ID'] == row['ID'], 'Status'].values[0]}
+            if changes:
+                update_status_batch(changes)
+                st.success("Updated successfully!")
+                st.cache_resource.clear()
+                st.rerun()
     else:
-        st.info("No reservations found for this date.")
-
+        st.info("No activity for this date. The grid above is open for bookings.")
