@@ -15,66 +15,51 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# --- 2. CSS OVERRIDES (VERT PREMIUM UI) ---
+# --- 2. CSS OVERRIDES (FORCE CONTRAST & FULL WIDTH) ---
 st.markdown("""
     <style>
-    /* 1. GLOBAL BACKGROUND & BASE TEXT */
+    /* 1. FORCE BACKGROUND & TEXT CONTRAST */
     .stApp {
-        background-color: #F4F6F8 !important; /* Your light grey */
-        color: #4A321F !important; /* Deepened your brown for legibility */
-        font-family: 'Inter', sans-serif;
+        background-color: #F4F6F8 !important;
     }
 
-    /* 2. CARD EFFECT FOR INPUTS */
-    input, div[data-baseweb="base-input"], div[data-baseweb="select"] > div {
-        background-color: #FFFFFF !important;
-        color: #1A1A1A !important;
-        border: 1px solid #D1D5DB !important;
-        border-radius: 8px !important;
-        box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    /* Target every possible text element to be Dark Brown */
+    .stApp, .stApp p, .stApp div, .stApp span, .stApp label {
+        color: #4A321F !important; 
     }
-    
+
+    /* 2. FIX INPUT BOXES (ENLARGE & FILL) */
+    div[data-baseweb="input"], div[data-baseweb="select"], .stTextInput input {
+        background-color: #FFFFFF !important;
+        color: #000000 !important;
+        border: 1px solid #D1D5DB !important;
+        width: 100% !important; /* Forces box to fill the column */
+        border-radius: 4px !important;
+    }
+
     /* 3. LABELS - VERT GREEN */
-    .stMarkdown label, .stSelectbox label, .stTextInput label, .stDateInput label, .stTimeInput label, .stNumberInput label, .stMultiSelect label {
+    .stMarkdown label, [data-testid="stWidgetLabel"] p {
         color: #12784A !important;
         font-weight: 800 !important;
-        letter-spacing: 0.5px;
-        text-transform: uppercase;
-        font-size: 0.8rem !important;
+        font-size: 0.9rem !important;
     }
 
-    /* 4. TABS - MODERN & FLAT */
-    button[data-baseweb="tab"] {
-        color: #654321 !important; /* Your Brown */
-        font-weight: 600 !important;
+    /* 4. BUTTONS - LARGE & VISIBLE */
+    .stButton > button {
+        width: 100% !important;
+        background-color: #4A321F !important;
+        color: #FFFFFF !important;
+        border-radius: 5px !important;
         border: none !important;
+        height: 3rem !important;
+    }
+
+    /* 5. TAB STYLING */
+    button[data-baseweb="tab"] p {
+        color: #4A321F !important;
     }
     button[data-baseweb="tab"][aria-selected="true"] {
-        color: #12784A !important; /* Green instead of Blue */
-        border-bottom: 3px solid #12784A !important;
-        background-color: rgba(18, 120, 74, 0.05) !important;
-    }
-
-    /* 5. BUTTONS - SMOOTH & DARK GREY */
-    .stButton > button {
-        background-color: #374151 !important;
-        color: #FFFFFF !important;
-        border-radius: 8px !important;
-        padding: 0.5rem 2rem !important;
-        border: none !important;
-        transition: all 0.3s ease;
-    }
-    .stButton > button:hover {
-        background-color: #12784A !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-
-    /* 6. METRIC CARDS STYLE */
-    [data-testid="stMetric"] {
-        background-color: #FFFFFF;
-        padding: 15px !important;
-        border-radius: 12px;
-        border: 1px solid #E5E7EB;
+        border-bottom-color: #12784A !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -232,108 +217,81 @@ with tab1:
                     st.cache_resource.clear()
                     st.rerun()
 
-# ==========================================
-# TAB 2: GRID VISUAL (Always Visible)
-# ==========================================
 with tab2:
-    # --- 1. Top Controls & Metrics ---
+    # --- Top Bar ---
     col_f1, col_f2, col_f3 = st.columns([2, 1, 1])
     with col_f1:
-        view_date = st.date_input("📅 View Schedule For", datetime.now(), key="view_grid_date")
+        view_date = st.date_input("📅 View Schedule For", datetime.now(), key="v_date_final_fix")
 
     df = load_data()
     df_day = df[df['Start'].dt.date == view_date].copy() if not df.empty else pd.DataFrame()
-    
-    # Simple Metrics
     confirmed = df_day[df_day['Status'] == 'Reserved'] if not df_day.empty else pd.DataFrame()
-    with col_f2:
-        st.metric("Total Bookings", len(confirmed))
-    with col_f3:
-        st.metric("Total Guests", int(confirmed['Pax'].sum()) if not confirmed.empty else 0)
 
-    # --- 2. The Perpetual Grid Logic ---
+    # --- Permanent Gantt Chart ---
     start_view = datetime.combine(view_date, time(10, 0))
     end_view = datetime.combine(view_date, time(23, 0))
     all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
 
-    # Build Skeleton: This ensures every table shows up even if empty
-    skeleton_data = []
-    for t in all_tables:
-        skeleton_data.append({
-            "Table": t, "Start": start_view, "End": start_view, 
-            "Customer Name": "", "IsDummy": True
-        })
-    skeleton_df = pd.DataFrame(skeleton_data)
+    # Skeleton Construction
+    skeleton_df = pd.DataFrame([{"Table": t, "Start": start_view, "End": start_view, "IsDummy": True, "Customer Name": ""} for t in all_tables])
 
-    # Process Actual Data
-    plot_df = confirmed.copy() if not confirmed.empty else pd.DataFrame()
-    if not plot_df.empty:
+    if not confirmed.empty:
+        plot_df = confirmed.copy()
         plot_df = plot_df.assign(Table=plot_df['Table'].str.split(', ')).explode('Table')
         plot_df['IsDummy'] = False
-        # Combine skeleton and actual data
         final_plot_df = pd.concat([skeleton_df, plot_df], ignore_index=True)
     else:
         final_plot_df = skeleton_df
 
-    # Create Figure
+    # Create Figure with STRICT hover removal
     fig = px.timeline(
         final_plot_df, 
         x_start="Start", x_end="End", y="Table", 
         hover_name="Customer Name",
-        # Use opacity to hide the skeleton "dots"
         color="IsDummy",
         color_discrete_map={True: "rgba(0,0,0,0)", False: "#12784A"}
     )
+
+    # REMOVE IS_DUMMY FROM HOVER COMPLETELY
+    fig.update_traces(
+        hovertemplate="<b>%{hovertext}</b><br>Time: %{base|%H:%M} - %{x|%H:%M}<extra></extra>",
+        selector=dict(name="False") # Only show hover for actual bookings
+    )
+    fig.update_traces(hoverinfo='none', selector=dict(name="True")) # Disable hover for skeleton
 
     fig.update_layout(
         xaxis_range=[start_view, end_view],
         xaxis=dict(
             tickformat="%H:%M", dtick=3600000, 
-            gridcolor="#F0F0F0", side="top", title="",
-            fixedrange=True
+            gridcolor="#D1D5DB", side="top", title="", 
+            tickfont=dict(color="#4A321F", size=12) 
         ),
         yaxis=dict(
             categoryorder="array", categoryarray=all_tables[::-1], 
-            gridcolor="#F0F0F0", title="",
-            fixedrange=True
+            gridcolor="#D1D5DB", title="", 
+            tickfont=dict(color="#4A321F", size=12) 
         ),
         plot_bgcolor="white",
-        paper_bgcolor="white",
+        paper_bgcolor="rgba(0,0,0,0)",
         height=500,
-        margin=dict(l=10, r=10, t=30, b=10),
-        showlegend=False
+        margin=dict(l=10, r=10, t=40, b=10),
+        showlegend=False,
+        font=dict(color="#4A321F") # Force chart text to Dark Brown
     )
-    
-    fig.update_traces(marker_line_width=0, selector=dict(name="True")) # Hide skeleton lines
-    fig.update_traces(marker_line_color="white", marker_line_width=2, marker_cornerradius=5, selector=dict(name="False"))
 
     st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
 
-    # --- 3. Status Management ---
-    st.markdown("---")
-    st.subheader("📋 Booking Details")
-
+    # --- Management Editor ---
+    st.markdown("### 📋 Status Management")
     if not df_day.empty:
-        edited_df = st.data_editor(
+        st.data_editor(
             df_day[["Status", "Start", "Table", "Customer Name", "Pax", "ID"]].sort_values("Start"),
             column_config={
-                "Status": st.column_config.SelectboxColumn("Status", options=["Reserved", "Cancelled"], required=True),
+                "Status": st.column_config.SelectboxColumn("Status", options=["Reserved", "Cancelled"]),
                 "Start": st.column_config.DatetimeColumn("Time", format="HH:mm"),
-                "ID": None # Keeps ID hidden from user but available for logic
+                "ID": None
             },
-            hide_index=True,
-            use_container_width=True,
-            key="grid_editor_v3"
+            hide_index=True, use_container_width=True, key="editor_fix_final"
         )
 
-        if st.button("💾 SAVE CHANGES"):
-            changes = {row['ID']: row['Status'] for _, row in edited_df.iterrows() 
-                       if row['Status'] != df_day.loc[df_day['ID'] == row['ID'], 'Status'].values[0]}
-            if changes:
-                update_status_batch(changes)
-                st.success("Updated successfully!")
-                st.cache_resource.clear()
-                st.rerun()
-    else:
-        st.info("No activity for this date. The grid above is open for bookings.")
 
