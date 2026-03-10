@@ -37,7 +37,7 @@ st.markdown("""
     div[data-baseweb="select"] div {
         color: #1A202C !important;
         -webkit-text-fill-color: #1A202C !important;
-        font-size: 1.3rem !important;
+        font-size: 1.05rem !important;
     }
 
     div[data-baseweb="select"] > div, 
@@ -52,7 +52,7 @@ st.markdown("""
     div[role="listbox"] ul li, div[role="listbox"] div {
         color: #0c1424 !important;
         background-color: #FFFFFF !important;
-        font-size: 1.3rem !important;
+        font-size: 1.05rem !important;
     }
 
     .stButton > button {
@@ -64,7 +64,6 @@ st.markdown("""
         padding: 0.75rem !important;
         width: 100% !important;
         border: none !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
     
     .stButton > button:hover {
@@ -337,3 +336,4 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
