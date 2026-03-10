@@ -25,7 +25,6 @@ st.markdown("""
     font-family: "Inter", sans-serif;
 }
 
-/* Standard page width feel */
 .block-container {
     padding-top: 2rem;
     padding-bottom: 2rem;
@@ -46,7 +45,7 @@ h2, h3 {
 }
 
 
-/* ---------- LABELS (THIS FIXES YOUR BOX GLITCH) ---------- */
+/* ---------- LABELS ---------- */
 
 [data-testid="stWidgetLabel"] {
     background: none !important;
@@ -72,23 +71,64 @@ div[data-baseweb="select"] > div,
 .stNumberInput > div {
 
     background-color: #FFFFFF !important;
-
     border: 1px solid #CBD5E1 !important;
-
     border-radius: 8px !important;
-
     min-height: 42px;
-
     transition: 0.2s border ease;
 }
 
-/* focus */
+/* Focus state */
 
 div[data-baseweb="input"]:focus-within,
 div[data-baseweb="base-input"]:focus-within,
-div[data-baseweb="select"] > div:focus-within {
+div[data-baseweb="select"] > div:focus-within,
+.stDateInput > div:focus-within,
+.stTimeInput > div:focus-within {
     border: 1px solid #FACC15 !important;
     box-shadow: 0 0 0 1px #FACC15;
+}
+
+
+/* ---------- INPUT TEXT COLOR FIX ---------- */
+
+/* All text inputs */
+
+input,
+textarea {
+    color: #000000 !important;
+    font-size: 15px !important;
+    font-weight: 500 !important;
+}
+
+/* Selectbox + Multiselect */
+
+div[data-baseweb="select"] * {
+    color: #000000 !important;
+}
+
+/* Dropdown list */
+
+div[role="listbox"] * {
+    color: #000000 !important;
+}
+
+/* Number input */
+
+.stNumberInput input {
+    color: #000000 !important;
+}
+
+/* Date / time input */
+
+.stDateInput input,
+.stTimeInput input {
+    color: #000000 !important;
+}
+
+/* Placeholder text */
+
+input::placeholder {
+    color: #64748B !important;
 }
 
 
@@ -106,24 +146,17 @@ span[data-baseweb="tag"] {
 .stButton > button {
 
     background-color: #FACC15 !important;
-
     color: #000 !important;
-
     font-weight: 700;
-
     border-radius: 8px;
-
     border: none;
-
     height: 44px;
-
     transition: 0.2s;
 }
 
 .stButton > button:hover {
 
     background-color: #EAB308 !important;
-
     transform: translateY(-1px);
 
 }
@@ -134,9 +167,7 @@ span[data-baseweb="tag"] {
 [data-testid="stMetricValue"] {
 
     color: #16A34A;
-
     font-weight: 800;
-
     font-size: 28px;
 
 }
@@ -144,7 +175,6 @@ span[data-baseweb="tag"] {
 [data-testid="stMetricLabel"] {
 
     font-weight: 600;
-
     color: #475569;
 
 }
@@ -155,7 +185,6 @@ span[data-baseweb="tag"] {
 [data-testid="stDataEditor"] {
 
     border-radius: 10px;
-
     border: 1px solid #E2E8F0;
 
 }
@@ -164,9 +193,7 @@ span[data-baseweb="tag"] {
 /* ---------- DIVIDERS ---------- */
 
 hr {
-
     border-color: #E2E8F0;
-
 }
 
 </style>
@@ -426,5 +453,6 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
 
 
