@@ -124,7 +124,7 @@ textarea {
 /* Selectbox + Multiselect */
 
 div[data-baseweb="select"]:not([data-testid="stDataEditor"] *) * {
-    color: #000000 !important;
+    color: #FFFFFF !important;
 }
 
 /* Dropdown list */
@@ -504,6 +504,7 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
 
 
 
