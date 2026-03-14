@@ -123,14 +123,18 @@ textarea {
 
 /* Selectbox + Multiselect */
 
-div[data-testid="stSelectbox"] div[data-baseweb="select"] * {
+div[data-baseweb="select"]:not([data-testid="stDataEditor"] *) * {
     color: #000000 !important;
 }
 
 /* Dropdown list */
 
-div[role="listbox"] * {
+div[role="listbox"] div {
     color: #000000 !important;
+}
+
+[data-testid="stDataEditor"] div[data-baseweb="select"] * {
+    color: inherit !important;
 }
 
 /* Number input */
@@ -500,6 +504,7 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
 
 
 
