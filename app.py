@@ -123,7 +123,7 @@ textarea {
 
 /* Selectbox + Multiselect */
 
-div[data-baseweb="select"] * {
+div[data-testid="stSelectbox"] div[data-baseweb="select"] * {
     color: #000000 !important;
 }
 
@@ -201,8 +201,6 @@ span[data-baseweb="tag"] {
 }
 
 
-/* ---------- DATA EDITOR ---------- */
-
 /* ---------- DATA EDITOR FULL STYLE ---------- */
 
 /* Main table container */
@@ -213,36 +211,28 @@ span[data-baseweb="tag"] {
     background-color: #FFFFFF !important;
 }
 
-
 /* Table cells */
-
 [data-testid="stDataEditor"] td {
     background-color: #FFFFFF !important;
     color: #000000 !important;
     font-size: 14px !important;
 }
 
-
 /* Header row */
-
 [data-testid="stDataEditor"] th {
     background-color: #F8FAFC !important;
     color: #334155 !important;
     font-weight: 700 !important;
 }
 
-
-/* Dropdown inside editor */
-
-[data-testid="stDataEditor"] div[data-baseweb="select"] > div {
-    background-color: #FFFFFF !important;
-    color: #000000 !important;
+/* FIX FOR DATA EDITOR DROPDOWN TEXT */
+/* This ensures that when you click a cell to edit, the text is visible */
+[data-testid="stDataEditor"] div[data-baseweb="select"] * {
+    color: inherit !important; 
 }
 
-
-/* Dropdown menu options */
-
-[data-testid="stDataEditor"] div[role="listbox"] * {
+/* This targets the popup list specifically to ensure black text on the white menu */
+[data-testid="stDataEditor"] div[role="listbox"] div {
     color: #000000 !important;
 }
 
@@ -510,6 +500,7 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
 
 
 
