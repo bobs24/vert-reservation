@@ -293,8 +293,8 @@ def add_reservation(payload):
         table_str, 
         payload["Customer Name"], 
         payload["Phone Number"],
-        str(payload["Start"]), 
-        str(payload["End"]), 
+        payload["Start"].strftime("%Y-%m-%d %H:%M:%S"), 
+        payload["End"].strftime("%Y-%m-%d %H:%M:%S"), 
         payload["Status"], 
         payload["ID"], 
         payload["Notes"], 
@@ -504,6 +504,7 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
 
 
 
