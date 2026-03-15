@@ -358,7 +358,7 @@ with tab1:
         with c4:
             res_time = st.time_input("Time", value=time(12, 0), step=900)
         with c5:
-            duration = st.selectbox("Duration", [1, 2, 3, 4], index=1, format_func=lambda x: f"{x} Hours")
+            duration = st.selectbox("Duration", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], index=1, format_func=lambda x: f"{x} Hours")
         with c6:
             table_list = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
             tables = st.multiselect("Assign Table(s)", table_list)
@@ -504,6 +504,7 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
 
 
 
