@@ -289,7 +289,9 @@ def add_reservation(payload):
         sheet.append_row(["Table", "Customer Name", "Phone Number", "Start", "End", "Status", "ID", "Notes", "Pax"])
 
     table_str = ", ".join(payload["Table"])
-    sheet.append_row([
+    
+    # Use .isoformat() or a clean string, but the key is value_input_option
+    row_data = [
         table_str, 
         payload["Customer Name"], 
         payload["Phone Number"],
@@ -299,7 +301,10 @@ def add_reservation(payload):
         payload["ID"], 
         payload["Notes"], 
         payload["Pax"]
-    ])
+    ]
+    
+    # 'USER_ENTERED' tells Sheets to parse the string as a date
+    sheet.append_row(row_data, value_input_option='USER_ENTERED')
 
 def update_status_batch(changes_dict):
     client = get_connection()
@@ -504,6 +509,7 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
 
 
 
