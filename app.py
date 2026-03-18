@@ -478,7 +478,7 @@ with tab2:
     
     if not df_day.empty:
         edited_df = st.data_editor(
-            df_day[["Status", "Start", "Table", "Customer Name", "Pax", "ID"]].sort_values("Start"),
+            df_day[["Status", "Start", "Table", "Customer Name", "Phone Number", "Pax", "Notes", "ID"]].sort_values("Start"),
             column_config={
                 "Status": st.column_config.SelectboxColumn(
                     "Status", 
@@ -509,6 +509,7 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
+
 
 
 
