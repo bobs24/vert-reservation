@@ -336,23 +336,28 @@ with tab1:
         c3, c4, c5, c6 = st.columns(4)
         with c3: pax = st.number_input("Guests", min_value=1, value=2)
         with c4: res_time = st.time_input("Time", value=time(12, 0))
-        with c5: duration = st.selectbox("Duration", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], index=1, format_func=lambda x: f"{x} Hours")
+        with c5: duration = st.selectbox("Duration", [1, 2, 3, 4, 5], index=1, format_func=lambda x: f"{x} Hours")
         with c6: 
             table_list = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
             tables = st.multiselect("Table(s)", table_list)
         
         notes = st.text_input("Notes")
-        if st.form_submit_button("✅ CONFIRM"):
+        if st.form_submit_button("✅ CONFIRM RESERVATION"):
             if final_cust and final_phone and tables:
-                start_dt = datetime.combine(res_date, res_time)
-                payload = {
-                    "Table": tables, "Customer Name": final_cust, "Phone Number": final_phone,
-                    "Start": start_dt, "End": start_dt + timedelta(hours=duration),
-                    "Status": "Reserved", "ID": str(uuid.uuid4())[:8], "Notes": notes, "Pax": pax
-                }
-                add_reservation(payload)
-                st.cache_resource.clear()
-                st.rerun()
+                with st.spinner("Processing booking..."):
+                    start_dt = datetime.combine(res_date, res_time)
+                    payload = {
+                        "Table": tables, "Customer Name": final_cust, "Phone Number": final_phone,
+                        "Start": start_dt, "End": start_dt + timedelta(hours=duration),
+                        "Status": "Reserved", "ID": str(uuid.uuid4())[:8], "Notes": notes, "Pax": pax
+                    }
+                    add_reservation(payload)
+                    st.balloons() # Professional Pop-up effect
+                    st.success(f"Successfully booked for {final_cust} at {res_time.strftime('%H:%M')}!")
+                    st.cache_resource.clear()
+                    st.rerun()
+            else:
+                st.error("Missing details. Please ensure Name, Phone, and Table are selected.")
 
 # --- TAB 2: SCHEDULE GRID ---
 with tab2:
@@ -361,13 +366,15 @@ with tab2:
         view_date = st.date_input("📅 View Schedule For", datetime.now(), key="grid_view_final")
 
     df = load_data()
+    # Filter by date
     df_day = df[df['Start'].dt.date == view_date].copy() if not df.empty else pd.DataFrame()
     
-    # --- YOUR GANTT CHART LOGIC (RETAINED EXACTLY) ---
+    # --- GANTT CHART LOGIC (ONLY SHOW RESERVED) ---
     start_view = datetime.combine(view_date, time(10, 0))
     end_view = datetime.combine(view_date, time(23, 0))
     all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
 
+    # CRITICAL: Filter Gantt to ONLY show 'Reserved' status
     confirmed = df_day[df_day['Status'] == 'Reserved'] if not df_day.empty else pd.DataFrame()
 
     total_res = len(confirmed)
@@ -404,46 +411,29 @@ with tab2:
     fig.update_traces(
         hovertemplate="<br><b>%{hovertext}</b><br>%{base|%H:%M} - %{x|%H:%M}<extra></extra>", 
         selector=dict(name="False"),
-        marker_line_color='rgb(8,48,107)',
-        marker_line_width=1.5,
-        opacity=0.95
+        marker_line_color='rgb(8,48,107)', marker_line_width=1.5, opacity=0.95
     )
     fig.update_traces(hoverinfo='none', selector=dict(name="True"))
 
     fig.update_layout(
         xaxis_range=[start_view, end_view],
-        xaxis=dict(
-            tickformat="%H:%M", 
-            gridcolor="#CBD5E0", 
-            side="top", 
-            title="", 
-            tickfont=dict(color="#1A202C", size=14, weight="bold")
-        ),
-        yaxis=dict(
-            categoryorder="array", 
-            categoryarray=all_tables[::-1], 
-            gridcolor="#CBD5E0", 
-            title="", 
-            tickfont=dict(color="#1A202C", size=14, weight="bold")
-        ),
-        plot_bgcolor="#FFFFFF", 
-        paper_bgcolor="rgba(0,0,0,0)", 
-        height=550, 
-        showlegend=False,
-        margin=dict(l=0, r=0, t=40, b=0)
+        xaxis=dict(tickformat="%H:%M", gridcolor="#CBD5E0", side="top", title="", tickfont=dict(color="#1A202C", size=14, weight="bold")),
+        yaxis=dict(categoryorder="array", categoryarray=all_tables[::-1], gridcolor="#CBD5E0", title="", tickfont=dict(color="#1A202C", size=14, weight="bold")),
+        plot_bgcolor="#FFFFFF", paper_bgcolor="rgba(0,0,0,0)", height=550, showlegend=False, margin=dict(l=0, r=0, t=40, b=0)
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- PROFESSIONAL STATUS MANAGEMENT ---
+    # --- STATUS MANAGEMENT (FILTERED LOGIC) ---
     st.markdown("---")
     header_col, toggle_col = st.columns([2, 1])
     with header_col:
         st.markdown("### 📋 Status Management")
-        st.caption("Manage active bookings or archive cancellations.")
+        st.caption("Reservations marked 'Cancelled' are removed from view unless toggled.")
     with toggle_col:
         show_cancelled = st.toggle("Show Cancelled Bookings", value=False)
 
     if not df_day.empty:
+        # Toggle Filter: Hide cancelled unless requested
         df_display = df_day.copy() if show_cancelled else df_day[df_day['Status'] != 'Cancelled'].copy()
 
         if not df_display.empty:
@@ -454,19 +444,26 @@ with tab2:
                     "Start": st.column_config.DatetimeColumn("Arrival", format="HH:mm", disabled=True),
                     "Customer Name": st.column_config.TextColumn("Guest", disabled=True),
                     "Table": st.column_config.TextColumn("Table", disabled=True),
-                    "ID": None
+                    "ID": None # Hidden from user
                 },
                 hide_index=True, use_container_width=True, key="status_mgmt_pro"
             )
 
-            if st.button("💾 COMMIT CHANGES", use_container_width=True):
-                changes = {row['ID']: row['Status'] for _, row in edited_df.iterrows() 
-                           if row['Status'] != df_day.loc[df_day['ID'] == row['ID'], 'Status'].values[0]}
+            if st.button("💾 COMMIT STATUS CHANGES", use_container_width=True):
+                changes = {}
+                for _, row in edited_df.iterrows():
+                    orig_status = df_day.loc[df_day['ID'] == row['ID'], 'Status'].values[0]
+                    if row['Status'] != orig_status:
+                        changes[row['ID']] = row['Status']
+                
                 if changes:
                     update_status_batch(changes)
-                    st.toast("Updated successfully!", icon="✅")
+                    st.toast("Database updated!", icon="✅")
                     st.cache_resource.clear()
                     st.rerun()
         else:
-            st.info("No active reservations to display.")
+            st.info("No active reservations for this date.")
+    else:
+        st.info("No data available for the selected date.")
+
 
