@@ -261,6 +261,13 @@ def update_status_batch(changes_dict):
     if updates:
         sheet.batch_update(updates)
 
+# ── RESET HELPERS ─────────────────────────────────────────────────────────────
+def reset_booking_fields():
+    """Wipe all outside-form fields so the next booking starts clean."""
+    for key in ["rt_date", "rt_time", "rt_dur", "rt_tables", "rt_guest"]:
+        if key in st.session_state:
+            del st.session_state[key]
+
 # ── LOAD DATA ─────────────────────────────────────────────────────────────────
 df_all = load_data()
 
@@ -286,7 +293,8 @@ with tab1:
     guest_search = st.selectbox(
         "Search returning guest",
         ["＋ New guest"] + sorted(search_options),
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        key="rt_guest"
     )
     val_name, val_phone = (
         guest_search.split(" | ")
@@ -381,6 +389,7 @@ with tab1:
                         add_reservation(payload)
                     st.success(f"✓ Booked {', '.join(tables)} for {final_cust} at {start_dt.strftime('%H:%M')}")
                     st.cache_resource.clear()
+                    reset_booking_fields()
                     st.rerun()
 
 
