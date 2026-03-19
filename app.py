@@ -257,8 +257,7 @@ def get_connection():
         creds_dict = st.secrets["gcp_service_account"]
         scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-        client = gspread.authorize(creds)
-        return client
+        return gspread.authorize(creds)
     except Exception as e:
         st.error(f"DB Connection Error: {e}")
         return None
@@ -305,10 +304,10 @@ def update_status_batch(changes_dict):
         except: continue
     if updates: sheet.batch_update(updates)
 
+# --- MAIN APP ---
 st.title("🍽️ Vert Reservation Manager")
 tab1, tab2 = st.tabs(["📝 NEW BOOKING", "📊 SCHEDULE GRID"])
 
-# --- TAB 1: NEW BOOKING ---
 with tab1:
     st.subheader("📅 Date & Time")
     c_date, _ = st.columns([1, 3])
@@ -352,29 +351,27 @@ with tab1:
                         "Status": "Reserved", "ID": str(uuid.uuid4())[:8], "Notes": notes, "Pax": pax
                     }
                     add_reservation(payload)
-                    st.balloons() # Professional Pop-up effect
+                    st.balloons() 
                     st.success(f"Successfully booked for {final_cust} at {res_time.strftime('%H:%M')}!")
                     st.cache_resource.clear()
                     st.rerun()
             else:
                 st.error("Missing details. Please ensure Name, Phone, and Table are selected.")
 
-# --- TAB 2: SCHEDULE GRID ---
 with tab2:
     col_f1, _ = st.columns([1, 2])
     with col_f1:
         view_date = st.date_input("📅 View Schedule For", datetime.now(), key="grid_view_final")
 
     df = load_data()
-    # Filter by date
     df_day = df[df['Start'].dt.date == view_date].copy() if not df.empty else pd.DataFrame()
     
-    # --- GANTT CHART LOGIC (ONLY SHOW RESERVED) ---
+    # --- GANTT CHART LOGIC (RESERVED ONLY) ---
     start_view = datetime.combine(view_date, time(10, 0))
     end_view = datetime.combine(view_date, time(23, 0))
     all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
 
-    # CRITICAL: Filter Gantt to ONLY show 'Reserved' status
+    # FILTER GANTT: Strictly 'Reserved' status only
     confirmed = df_day[df_day['Status'] == 'Reserved'] if not df_day.empty else pd.DataFrame()
 
     total_res = len(confirmed)
@@ -395,7 +392,6 @@ with tab2:
     st.markdown("---")
 
     skeleton_df = pd.DataFrame([{"Table": t, "Start": start_view, "End": start_view, "IsDummy": True} for t in all_tables])
-
     if not plot_df.empty:
         plot_df['IsDummy'] = False
         final_plot_df = pd.concat([skeleton_df, plot_df], ignore_index=True)
@@ -407,14 +403,12 @@ with tab2:
         color="IsDummy", color_discrete_map={True: "rgba(0,0,0,0)", False: "#17A363"},
         hover_name="Customer Name" if "Customer Name" in final_plot_df.columns else None
     )
-
     fig.update_traces(
         hovertemplate="<br><b>%{hovertext}</b><br>%{base|%H:%M} - %{x|%H:%M}<extra></extra>", 
         selector=dict(name="False"),
         marker_line_color='rgb(8,48,107)', marker_line_width=1.5, opacity=0.95
     )
     fig.update_traces(hoverinfo='none', selector=dict(name="True"))
-
     fig.update_layout(
         xaxis_range=[start_view, end_view],
         xaxis=dict(tickformat="%H:%M", gridcolor="#CBD5E0", side="top", title="", tickfont=dict(color="#1A202C", size=14, weight="bold")),
@@ -423,17 +417,17 @@ with tab2:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # --- STATUS MANAGEMENT (FILTERED LOGIC) ---
+    # --- STATUS MANAGEMENT ---
     st.markdown("---")
     header_col, toggle_col = st.columns([2, 1])
     with header_col:
         st.markdown("### 📋 Status Management")
-        st.caption("Reservations marked 'Cancelled' are removed from view unless toggled.")
+        st.caption("Manage active bookings or archive cancellations.")
     with toggle_col:
         show_cancelled = st.toggle("Show Cancelled Bookings", value=False)
 
     if not df_day.empty:
-        # Toggle Filter: Hide cancelled unless requested
+        # LOGIC: Hide cancelled by default
         df_display = df_day.copy() if show_cancelled else df_day[df_day['Status'] != 'Cancelled'].copy()
 
         if not df_display.empty:
@@ -444,7 +438,7 @@ with tab2:
                     "Start": st.column_config.DatetimeColumn("Arrival", format="HH:mm", disabled=True),
                     "Customer Name": st.column_config.TextColumn("Guest", disabled=True),
                     "Table": st.column_config.TextColumn("Table", disabled=True),
-                    "ID": None # Hidden from user
+                    "ID": None
                 },
                 hide_index=True, use_container_width=True, key="status_mgmt_pro"
             )
@@ -452,6 +446,7 @@ with tab2:
             if st.button("💾 COMMIT STATUS CHANGES", use_container_width=True):
                 changes = {}
                 for _, row in edited_df.iterrows():
+                    # Find original status from the master day dataframe
                     orig_status = df_day.loc[df_day['ID'] == row['ID'], 'Status'].values[0]
                     if row['Status'] != orig_status:
                         changes[row['ID']] = row['Status']
@@ -462,8 +457,4 @@ with tab2:
                     st.cache_resource.clear()
                     st.rerun()
         else:
-            st.info("No active reservations for this date.")
-    else:
-        st.info("No data available for the selected date.")
-
-
+            st.info("No bookings match your filter.")
