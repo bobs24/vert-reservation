@@ -261,12 +261,14 @@ def update_status_batch(changes_dict):
     if updates:
         sheet.batch_update(updates)
 
-# ── RESET HELPERS ─────────────────────────────────────────────────────────────
-def reset_booking_fields():
-    """Wipe all outside-form fields so the next booking starts clean."""
-    for key in ["rt_date", "rt_time", "rt_dur", "rt_tables", "rt_guest"]:
-        if key in st.session_state:
-            del st.session_state[key]
+# ── RESET COUNTER ─────────────────────────────────────────────────────────────
+# Incrementing forces all outside-form widgets to get brand-new keys,
+# so Streamlit renders them fresh with their default values.
+if "booking_reset_n" not in st.session_state:
+    st.session_state.booking_reset_n = 0
+
+def bump_reset():
+    st.session_state.booking_reset_n += 1
 
 # ── LOAD DATA ─────────────────────────────────────────────────────────────────
 df_all = load_data()
@@ -281,6 +283,8 @@ tab1, tab2 = st.tabs(["  NEW BOOKING  ", "  SCHEDULE GRID  "])
 # ══════════════════════════════════════════════════════════════════════════════
 with tab1:
 
+    n = st.session_state.booking_reset_n  # shorthand
+
     # ── Guest search (outside form for reactivity) ──
     st.markdown('<div class="section-label">Guest</div>', unsafe_allow_html=True)
     search_options = []
@@ -294,7 +298,7 @@ with tab1:
         "Search returning guest",
         ["＋ New guest"] + sorted(search_options),
         label_visibility="collapsed",
-        key="rt_guest"
+        key=f"rt_guest_{n}"
     )
     val_name, val_phone = (
         guest_search.split(" | ")
@@ -306,15 +310,15 @@ with tab1:
     
     dc1, dc2, dc3, dc4 = st.columns([1.1, 0.9, 0.9, 1.5])
     with dc1:
-        res_date  = st.date_input("Date", min_value=datetime.now().date(), key="rt_date")
+        res_date  = st.date_input("Date", min_value=datetime.now().date(), key=f"rt_date_{n}")
     with dc2:
-        res_time  = st.time_input("Arrival", value=time(19, 0), key="rt_time")
+        res_time  = st.time_input("Arrival", value=time(19, 0), key=f"rt_time_{n}")
     with dc3:
         duration  = st.selectbox("Duration", [1, 1.5, 2, 2.5, 3, 4, 5], index=2,
                                   format_func=lambda x: f"{x} hr{'s' if x != 1 else ''}",
-                                  key="rt_dur")
+                                  key=f"rt_dur_{n}")
     with dc4:
-        tables    = st.multiselect("Table(s)", ALL_TABLES, key="rt_tables")
+        tables    = st.multiselect("Table(s)", ALL_TABLES, key=f"rt_tables_{n}")
 
     # ── REAL-TIME CONFLICT CHECK ──────────────────────────────────────────────
     is_monday  = (res_date.weekday() == 0)
@@ -389,7 +393,7 @@ with tab1:
                         add_reservation(payload)
                     st.success(f"✓ Booked {', '.join(tables)} for {final_cust} at {start_dt.strftime('%H:%M')}")
                     st.cache_resource.clear()
-                    reset_booking_fields()
+                    bump_reset()
                     st.rerun()
 
 
