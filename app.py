@@ -314,7 +314,7 @@ with tab1:
     with dc2:
         res_time  = st.time_input("Arrival", value=time(19, 0), key=f"rt_time_{n}")
     with dc3:
-        duration  = st.selectbox("Duration", [1, 1.5, 2, 2.5, 3, 4, 5], index=2,
+        duration  = st.selectbox("Duration", [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7, 8, 9, 10], index=2,
                                   format_func=lambda x: f"{x} hr{'s' if x != 1 else ''}",
                                   key=f"rt_dur_{n}")
     with dc4:
@@ -585,3 +585,4 @@ with tab2:
             'No reservations found for this date.</div>',
             unsafe_allow_html=True
         )
+
