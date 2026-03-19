@@ -331,70 +331,81 @@ with tab1:
         if res_date.weekday() == 0:
             st.error("⛔ **STOP!** Monday selected. (Venue Closed)")
 
+# --- 📋 STATUS MANAGEMENT SECTION ---
     st.markdown("---")
-
-    df_cached = load_data()
-    search_options = []
-    if not df_cached.empty:
-        temp_df = df_cached[["Customer Name", "Phone Number"]].drop_duplicates()
-        search_options = (temp_df["Customer Name"].astype(str) + " | " + temp_df["Phone Number"].astype(str)).tolist()
+    header_col, toggle_col = st.columns([2, 1])
     
-    st.subheader("👤 Guest Information")
-    guest_search = st.selectbox("Search by Name or Phone (Suggests Existing)", ["+ Add New Guest"] + sorted(search_options))
-    
-    val_name = ""
-    val_phone = ""
-    if guest_search != "+ Add New Guest":
-        val_name, val_phone = guest_search.split(" | ")
+    with header_col:
+        st.markdown("### 📋 Status Management")
+        st.caption("Manage active bookings or archive cancellations.")
 
-    with st.form("res_form", clear_on_submit=True):
-        c1, c2 = st.columns(2)
-        with c1:
-            final_cust = st.text_input("Customer Name", value=val_name)
-        with c2:
-            final_phone = st.text_input("Phone Number", value=val_phone)
+    with toggle_col:
+        # Professional toggle aligned to the right
+        show_cancelled = st.toggle("Show Cancelled Bookings", value=False, help="Toggle to view or recover cancelled reservations.")
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.subheader("🍽️ Table Details")
+    if not df_day.empty:
+        # Filter logic based on the toggle
+        if show_cancelled:
+            # Show everything
+            df_display = df_day.copy()
+        else:
+            # Hide rows already marked as Cancelled
+            df_display = df_day[df_day['Status'] != 'Cancelled'].copy()
 
-        c3, c4, c5, c6 = st.columns(4)
-        with c3:
-            pax = st.number_input("Guests (Pax)", min_value=1, value=2)
-        with c4:
-            res_time = st.time_input("Time", value=time(12, 0), step=900)
-        with c5:
-            duration = st.selectbox("Duration", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], index=1, format_func=lambda x: f"{x} Hours")
-        with c6:
-            table_list = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
-            tables = st.multiselect("Assign Table(s)", table_list)
+        if not df_display.empty:
+            # Sort by time for a professional chronological view
+            df_display = df_display.sort_values("Start")
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.subheader("📝 Notes")
-        notes = st.text_input("Special Requests (Birthday, Allergy, etc.)")
+            edited_df = st.data_editor(
+                df_display[["Status", "Start", "Table", "Customer Name", "Phone Number", "Pax", "Notes", "ID"]],
+                column_config={
+                    "Status": st.column_config.SelectboxColumn(
+                        "Status", 
+                        options=["Reserved", "Cancelled"],
+                        required=True,
+                        width="medium"
+                    ),
+                    "Start": st.column_config.DatetimeColumn(
+                        "Arrival Time", 
+                        format="HH:mm",
+                        disabled=True # Keep time locked in status view
+                    ),
+                    "Customer Name": st.column_config.TextColumn("Guest", disabled=True),
+                    "Table": st.column_config.TextColumn("Table", disabled=True),
+                    "ID": None # Hidden from user
+                },
+                hide_index=True, 
+                use_container_width=True, 
+                key="status_editor_vProfessional"
+            )
 
-        st.markdown("<br>", unsafe_allow_html=True)
-        submitted = st.form_submit_button("✅ CONFIRM RESERVATION")
-
-        if submitted:
-            if not final_cust or not final_phone:
-                st.error("Please provide both Customer Name and Phone Number.")
-            elif not tables:
-                st.error("Please select at least one table.")
-            else:
-                with st.spinner("Processing..."):
-                    start_dt = datetime.combine(res_date, res_time)
-                    end_dt = start_dt + timedelta(hours=duration)
-                    payload = {
-                        "Table": tables,
-                        "Customer Name": final_cust,
-                        "Phone Number": final_phone,
-                        "Start": start_dt, "End": end_dt, "Status": "Reserved",
-                        "ID": str(uuid.uuid4())[:8], "Notes": notes, "Pax": pax
-                    }
-                    add_reservation(payload)
-                    st.toast("Reservation Created!", icon="🎉")
-                    st.cache_resource.clear()
-                    st.rerun()
+            # Professional Action Bar
+            btn_col, info_col = st.columns([1, 3])
+            with btn_col:
+                save_clicked = st.button("💾 COMMIT CHANGES", use_container_width=True)
+            
+            if save_clicked:
+                changes = {}
+                # Compare edited rows back to the original database state
+                for _, row in edited_df.iterrows():
+                    match = df_day[df_day['ID'] == row['ID']]
+                    if not match.empty:
+                        orig_status = match['Status'].values[0]
+                        if row['Status'] != orig_status:
+                            changes[row['ID']] = row['Status']
+                
+                if changes:
+                    with st.spinner("Updating records..."):
+                        update_status_batch(changes)
+                        st.toast(f"Updated {len(changes)} record(s) successfully!", icon="✅")
+                        st.cache_resource.clear()
+                        st.rerun()
+                else:
+                    st.toast("No changes detected.", icon="ℹ️")
+        else:
+            st.info("No active reservations found for this view.")
+    else:
+        st.info("No data available for the selected date.")
 
 with tab2:
     col_f1, _ = st.columns([1, 2])
@@ -509,16 +520,3 @@ with tab2:
                 st.info("No changes to save.")
     else:
         st.info("No reservations for this date.")
-
-
-
-
-
-
-
-
-
-
-
-
-
