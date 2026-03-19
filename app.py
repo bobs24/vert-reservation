@@ -277,8 +277,28 @@ def load_data():
         if not df.empty:
             df['Start'] = pd.to_datetime(df['Start'], errors='coerce')
             df['End'] = pd.to_datetime(df['End'], errors='coerce')
+            # Handle potential numeric conversion for Pax
+            df['Pax'] = pd.to_numeric(df['Pax'], errors='coerce').fillna(0)
         return df
     except: return pd.DataFrame()
+
+def check_availability(new_start, new_end, requested_tables, existing_df):
+    """Business Logic: Checks if tables are free during the requested window."""
+    if existing_df.empty: return True, []
+    
+    # Filter for active reservations only
+    active = existing_df[existing_df['Status'] == 'Reserved'].copy()
+    conflicts = []
+    
+    for _, row in active.iterrows():
+        # Check time overlap: (StartA < EndB) and (EndA > StartB)
+        if (new_start < row['End']) and (new_end > row['Start']):
+            row_tables = [t.strip() for t in str(row['Table']).split(',')]
+            overlap_tables = set(requested_tables).intersection(set(row_tables))
+            if overlap_tables:
+                conflicts.append(f"{row['Customer Name']} ({', '.join(overlap_tables)})")
+                
+    return (len(conflicts) == 0), conflicts
 
 def add_reservation(payload):
     client = get_connection()
@@ -308,23 +328,27 @@ def update_status_batch(changes_dict):
 st.title("🍽️ Vert Reservation Manager")
 tab1, tab2 = st.tabs(["📝 NEW BOOKING", "📊 SCHEDULE GRID"])
 
+# Pre-load data once for the session
+df_all = load_data()
+
 with tab1:
     st.subheader("📅 Date & Time")
-    c_date, _ = st.columns([1, 3])
+    c_date, c_warning = st.columns([1, 2])
     with c_date:
         res_date = st.date_input("Select Date", min_value=datetime.now())
+    
     if res_date.weekday() == 0:
         st.error("⛔ **STOP!** Monday selected. (Venue Closed)")
 
     st.markdown("---")
-    df_cached = load_data()
+    
     search_options = []
-    if not df_cached.empty:
-        temp_df = df_cached[["Customer Name", "Phone Number"]].drop_duplicates()
+    if not df_all.empty:
+        temp_df = df_all[["Customer Name", "Phone Number"]].drop_duplicates()
         search_options = (temp_df["Customer Name"].astype(str) + " | " + temp_df["Phone Number"].astype(str)).tolist()
     
     st.subheader("👤 Guest Information")
-    guest_search = st.selectbox("Search Guest", ["+ Add New Guest"] + sorted(search_options))
+    guest_search = st.selectbox("Search Guest (Auto-fill)", ["+ Add New Guest"] + sorted(search_options))
     val_name, val_phone = (guest_search.split(" | ") if guest_search != "+ Add New Guest" else ("", ""))
 
     with st.form("res_form", clear_on_submit=True):
@@ -341,79 +365,76 @@ with tab1:
             tables = st.multiselect("Table(s)", table_list)
         
         notes = st.text_input("Notes")
-        if st.form_submit_button("✅ CONFIRM RESERVATION"):
-            if final_cust and final_phone and tables:
+        submit = st.form_submit_button("✅ CONFIRM RESERVATION")
+        
+        if submit:
+            start_dt = datetime.combine(res_date, res_time)
+            end_dt = start_dt + timedelta(hours=duration)
+            
+            # Feature: Conflict Validation
+            is_available, conflicts = check_availability(start_dt, end_dt, tables, df_all)
+            
+            if not (final_cust and final_phone and tables):
+                st.error("Missing details. Please ensure Name, Phone, and Table are selected.")
+            elif not is_available:
+                st.error(f"⚠️ **TABLE CONFLICT!** The following bookings already exist for this time: {', '.join(conflicts)}")
+            else:
                 with st.spinner("Processing booking..."):
-                    start_dt = datetime.combine(res_date, res_time)
                     payload = {
                         "Table": tables, "Customer Name": final_cust, "Phone Number": final_phone,
-                        "Start": start_dt, "End": start_dt + timedelta(hours=duration),
+                        "Start": start_dt, "End": end_dt,
                         "Status": "Reserved", "ID": str(uuid.uuid4())[:8], "Notes": notes, "Pax": pax
                     }
                     add_reservation(payload)
                     st.balloons() 
-                    st.success(f"Successfully booked for {final_cust} at {res_time.strftime('%H:%M')}!")
+                    st.success(f"Successfully booked for {final_cust}!")
                     st.cache_resource.clear()
                     st.rerun()
-            else:
-                st.error("Missing details. Please ensure Name, Phone, and Table are selected.")
 
 with tab2:
     col_f1, _ = st.columns([1, 2])
     with col_f1:
         view_date = st.date_input("📅 View Schedule For", datetime.now(), key="grid_view_final")
 
-    df = load_data()
-    df_day = df[df['Start'].dt.date == view_date].copy() if not df.empty else pd.DataFrame()
+    df_day = df_all[df_all['Start'].dt.date == view_date].copy() if not df_all.empty else pd.DataFrame()
     
-    # --- GANTT CHART LOGIC (RESERVED ONLY) ---
+    # --- GANTT CHART LOGIC ---
     start_view = datetime.combine(view_date, time(10, 0))
     end_view = datetime.combine(view_date, time(23, 0))
     all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
 
-    # FILTER GANTT: Strictly 'Reserved' status only
     confirmed = df_day[df_day['Status'] == 'Reserved'] if not df_day.empty else pd.DataFrame()
-
     total_res = len(confirmed)
     total_pax = confirmed['Pax'].sum() if not confirmed.empty else 0
     
-    if not confirmed.empty:
-        plot_df = confirmed.assign(Table=confirmed['Table'].str.split(', ')).explode('Table')
-        active_tables = plot_df['Table'].nunique()
-    else:
-        plot_df = pd.DataFrame()
-        active_tables = 0
-
     st.markdown("### 📈 Daily Summary")
     m1, m2, m3 = st.columns(3)
     m1.metric("Active Reservations", total_res)
     m2.metric("Total Pax", int(total_pax))
-    m3.metric("Tables Occupied", active_tables)
+    m3.metric("Tables Occupied", confirmed['Table'].str.split(', ').explode().nunique() if not confirmed.empty else 0)
     st.markdown("---")
 
-    skeleton_df = pd.DataFrame([{"Table": t, "Start": start_view, "End": start_view, "IsDummy": True} for t in all_tables])
-    if not plot_df.empty:
+    # Chart Generation
+    if not confirmed.empty:
+        plot_df = confirmed.assign(Table=confirmed['Table'].str.split(', ')).explode('Table')
         plot_df['IsDummy'] = False
-        final_plot_df = pd.concat([skeleton_df, plot_df], ignore_index=True)
     else:
-        final_plot_df = skeleton_df
+        plot_df = pd.DataFrame()
+
+    skeleton_df = pd.DataFrame([{"Table": t, "Start": start_view, "End": start_view, "IsDummy": True} for t in all_tables])
+    final_plot_df = pd.concat([skeleton_df, plot_df], ignore_index=True)
 
     fig = px.timeline(
         final_plot_df, x_start="Start", x_end="End", y="Table",
         color="IsDummy", color_discrete_map={True: "rgba(0,0,0,0)", False: "#17A363"},
         hover_name="Customer Name" if "Customer Name" in final_plot_df.columns else None
     )
-    fig.update_traces(
-        hovertemplate="<br><b>%{hovertext}</b><br>%{base|%H:%M} - %{x|%H:%M}<extra></extra>", 
-        selector=dict(name="False"),
-        marker_line_color='rgb(8,48,107)', marker_line_width=1.5, opacity=0.95
-    )
-    fig.update_traces(hoverinfo='none', selector=dict(name="True"))
+    
     fig.update_layout(
         xaxis_range=[start_view, end_view],
-        xaxis=dict(tickformat="%H:%M", gridcolor="#CBD5E0", side="top", title="", tickfont=dict(color="#1A202C", size=14, weight="bold")),
-        yaxis=dict(categoryorder="array", categoryarray=all_tables[::-1], gridcolor="#CBD5E0", title="", tickfont=dict(color="#1A202C", size=14, weight="bold")),
-        plot_bgcolor="#FFFFFF", paper_bgcolor="rgba(0,0,0,0)", height=550, showlegend=False, margin=dict(l=0, r=0, t=40, b=0)
+        xaxis=dict(tickformat="%H:%M", gridcolor="#CBD5E0", side="top", title=""),
+        yaxis=dict(categoryorder="array", categoryarray=all_tables[::-1], title=""),
+        plot_bgcolor="#FFFFFF", height=500, showlegend=False, margin=dict(l=0, r=0, t=40, b=0)
     )
     st.plotly_chart(fig, use_container_width=True)
 
@@ -422,12 +443,10 @@ with tab2:
     header_col, toggle_col = st.columns([2, 1])
     with header_col:
         st.markdown("### 📋 Status Management")
-        st.caption("Manage active bookings or archive cancellations.")
     with toggle_col:
         show_cancelled = st.toggle("Show Cancelled Bookings", value=False)
 
     if not df_day.empty:
-        # LOGIC: Hide cancelled by default
         df_display = df_day.copy() if show_cancelled else df_day[df_day['Status'] != 'Cancelled'].copy()
 
         if not df_display.empty:
@@ -436,25 +455,23 @@ with tab2:
                 column_config={
                     "Status": st.column_config.SelectboxColumn("Status", options=["Reserved", "Cancelled"], required=True),
                     "Start": st.column_config.DatetimeColumn("Arrival", format="HH:mm", disabled=True),
-                    "Customer Name": st.column_config.TextColumn("Guest", disabled=True),
-                    "Table": st.column_config.TextColumn("Table", disabled=True),
-                    "ID": None
+                    "ID": None # Hidden
                 },
-                hide_index=True, use_container_width=True, key="status_mgmt_pro"
+                hide_index=True, use_container_width=True, key="editor_v2"
             )
 
-            if st.button("💾 COMMIT STATUS CHANGES", use_container_width=True):
+            if st.button("💾 SAVE CHANGES", use_container_width=True):
                 changes = {}
                 for _, row in edited_df.iterrows():
-                    # Find original status from the master day dataframe
                     orig_status = df_day.loc[df_day['ID'] == row['ID'], 'Status'].values[0]
                     if row['Status'] != orig_status:
                         changes[row['ID']] = row['Status']
                 
                 if changes:
                     update_status_batch(changes)
-                    st.toast("Database updated!", icon="✅")
+                    st.toast("Updated Successfully!", icon="✅")
                     st.cache_resource.clear()
                     st.rerun()
         else:
-            st.info("No bookings match your filter.")
+            st.info("No active bookings for this date.")
+
