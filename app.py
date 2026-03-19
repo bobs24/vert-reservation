@@ -551,6 +551,7 @@ with tab2:
                     ),
                     "Table":  st.column_config.TextColumn("Table",  disabled=True),
                     "Customer Name": st.column_config.TextColumn("Guest", disabled=True),
+                    "Phone Number": st.column_config.TextColumn("Phone Number", disabled=True),
                     "Pax":    st.column_config.NumberColumn("Pax",   disabled=True, width="small"),
                     "Notes":  st.column_config.TextColumn("Notes",  disabled=True),
                     "ID":     None,
@@ -585,4 +586,5 @@ with tab2:
             'No reservations found for this date.</div>',
             unsafe_allow_html=True
         )
+
 
