@@ -415,23 +415,16 @@ with tab2:
         df_reserved = pd.DataFrame()
 
     # ── Metrics ───────────────────────────────────────────────────────────────
-    m1, m2, m3, m4 = st.columns(4)
+    m1, m2, m3 = st.columns(3)
     total_res  = len(df_reserved)
     total_pax  = int(df_reserved['Pax'].sum()) if not df_reserved.empty else 0
     tables_occ = (
         df_reserved['Table'].str.split(', ').explode().nunique()
         if not df_reserved.empty else 0
     )
-    peak_hour = ""
-    if not df_reserved.empty:
-        hour_counts = df_reserved['Start'].dt.hour.value_counts()
-        if not hour_counts.empty:
-            peak_hour = f"{hour_counts.idxmax():02d}:00"
-
-    m1.metric("RESERVATIONS", total_res)
-    m2.metric("TOTAL PAX",    total_pax)
+    m1.metric("RESERVATIONS",  total_res)
+    m2.metric("TOTAL PAX",     total_pax)
     m3.metric("TABLES IN USE", f"{tables_occ} / {len(ALL_TABLES)}")
-    m4.metric("PEAK HOUR",    peak_hour or "—")
 
     # ── GANTT CHART ────────────────────────────────────────────────────────────
     start_view = datetime.combine(view_date, time(10, 0))
