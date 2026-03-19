@@ -3,475 +3,200 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime, timedelta, time
-import plotly.graph_objects as go
-import uuid
 import plotly.express as px
+import uuid
 
+# --- 1. CONFIG & SYSTEM SETUP ---
 st.set_page_config(
-    page_title="Vert Reservation Manager", 
-    layout="wide", 
+    page_title="Vert Reservation Manager",
+    layout="wide",
     page_icon="🍽️",
     initial_sidebar_state="collapsed"
 )
 
-# --- IMPROVED UI STYLING ---
+# Implementation of your exact CSS protocol
 st.markdown("""
 <style>
-
-/* ---------- GLOBAL APP ---------- */
-
-.stApp {
-    background-color: #F8FAFC;
-    font-family: "Inter", sans-serif;
-}
-
-.block-container {
-    padding-top: 2rem;
-    padding-bottom: 2rem;
-}
-
-
-/* ---------- HEADERS ---------- */
-
-h1 {
-    font-size: 34px !important;
-    font-weight: 800 !important;
-    color: #0F172A !important;
-}
-
-h2, h3 {
-    font-weight: 700 !important;
-    color: #1E293B !important;
-}
-
-/* ---------- TABS (NEW BOOKING / SCHEDULE GRID) ---------- */
-
-button[data-baseweb="tab"] {
-    font-size: 16px !important;
-    font-weight: 700 !important;
-    color: #334155 !important;
-    padding: 10px 18px !important;
-}
-
-/* active tab */
-
-button[data-baseweb="tab"][aria-selected="true"] {
-    color: #0F172A !important;
-    border-bottom: 3px solid #FACC15 !important;
-}
-
-/* hover */
-
-button[data-baseweb="tab"]:hover {
-    color: #000000 !important;
-}
-
-/* ---------- LABELS ---------- */
-
-[data-testid="stWidgetLabel"] {
-    background: none !important;
-    border: none !important;
-    padding: 0 !important;
-    margin-bottom: 6px !important;
-}
-
-[data-testid="stWidgetLabel"] p {
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    color: #334155 !important;
-}
-
-
-/* ---------- INPUT BOX SYSTEM ---------- */
-
-div[data-baseweb="input"],
-div[data-baseweb="base-input"],
-div[data-baseweb="select"] > div,
-.stDateInput > div,
-.stTimeInput > div,
-.stNumberInput > div {
-
-    background-color: #FFFFFF !important;
-    border: 1px solid #CBD5E1 !important;
-    border-radius: 8px !important;
-    min-height: 42px;
-    transition: 0.2s border ease;
-}
-
-/* Focus state */
-
-div[data-baseweb="input"]:focus-within,
-div[data-baseweb="base-input"]:focus-within,
-div[data-baseweb="select"] > div:focus-within,
-.stDateInput > div:focus-within,
-.stTimeInput > div:focus-within {
-    border: 1px solid #FACC15 !important;
-    box-shadow: 0 0 0 1px #FACC15;
-}
-
-
-/* ---------- INPUT TEXT COLOR FIX ---------- */
-
-/* All text inputs */
-
-input,
-textarea {
-    color: #000000 !important;
-    font-size: 15px !important;
-    font-weight: 500 !important;
-}
-
-/* Selectbox + Multiselect */
-
-div[data-baseweb="select"]:not([data-testid="stDataEditor"] *) * {
-    color: #000000 !important;
-}
-
-/* Dropdown list */
-
-div[role="listbox"] div {
-    color: #FFFFFF !important;
-}
-
-[data-testid="stDataEditor"] div[data-baseweb="select"] * {
-    color: inherit !important;
-}
-
-/* Number input */
-
-.stNumberInput input {
-    color: #000000 !important;
-}
-
-/* Date / time input */
-
-.stDateInput input,
-.stTimeInput input {
-    color: #000000 !important;
-}
-
-/* Placeholder text */
-
-input::placeholder {
-    color: #64748B !important;
-}
-
-
-/* ---------- MULTISELECT TAGS ---------- */
-
-span[data-baseweb="tag"] {
-    background-color: #FEF08A !important;
-    color: #1E293B !important;
-    border-radius: 6px !important;
-}
-
-
-/* ---------- BUTTON ---------- */
-
-.stButton > button {
-
-    background-color: #FACC15 !important;
-    color: #000 !important;
-    font-weight: 700;
-    border-radius: 8px;
-    border: none;
-    height: 44px;
-    transition: 0.2s;
-}
-
-.stButton > button:hover {
-
-    background-color: #EAB308 !important;
-    transform: translateY(-1px);
-
-}
-
-
-/* ---------- METRICS ---------- */
-
-[data-testid="stMetricValue"] {
-
-    color: #16A34A;
-    font-weight: 800;
-    font-size: 28px;
-
-}
-
-[data-testid="stMetricLabel"] {
-
-    font-weight: 600;
-    color: #475569;
-
-}
-
-
-/* ---------- DATA EDITOR FULL STYLE ---------- */
-
-/* Main table container */
-
-[data-testid="stDataEditor"] {
-    border-radius: 10px;
-    border: 1px solid #E2E8F0;
-    background-color: #FFFFFF !important;
-}
-
-/* Table cells */
-[data-testid="stDataEditor"] td {
-    background-color: #FFFFFF !important;
-    color: #000000 !important;
-    font-size: 14px !important;
-}
-
-/* Header row */
-[data-testid="stDataEditor"] th {
-    background-color: #F8FAFC !important;
-    color: #334155 !important;
-    font-weight: 700 !important;
-}
-
-/* FIX FOR DATA EDITOR DROPDOWN TEXT */
-/* This ensures that when you click a cell to edit, the text is visible */
-[data-testid="stDataEditor"] div[data-baseweb="select"] * {
-    color: inherit !important; 
-}
-
-/* This targets the popup list specifically to ensure black text on the white menu */
-[data-testid="stDataEditor"] div[role="listbox"] div {
-    color: #000000 !important;
-}
-
-
-/* ---------- DIVIDERS ---------- */
-
-hr {
-    border-color: #E2E8F0;
-}
-
+    .stApp { background-color: #F8FAFC; font-family: "Inter", sans-serif; }
+    .block-container { padding-top: 2rem; padding-bottom: 2rem; }
+    h1 { font-size: 34px !important; font-weight: 800 !important; color: #0F172A !important; }
+    h2, h3 { font-weight: 700 !important; color: #1E293B !important; }
+
+    /* Tabs styling */
+    button[data-baseweb="tab"] { font-size: 16px !important; font-weight: 700 !important; color: #334155 !important; padding: 10px 18px !important; }
+    button[data-baseweb="tab"][aria-selected="true"] { color: #0F172A !important; border-bottom: 3px solid #FACC15 !important; }
+
+    /* Input Box System */
+    div[data-baseweb="input"], div[data-baseweb="base-input"], div[data-baseweb="select"] > div,
+    .stDateInput > div, .stTimeInput > div, .stNumberInput > div {
+        background-color: #FFFFFF !important; border: 1px solid #CBD5E1 !important; border-radius: 8px !important; min-height: 42px;
+    }
+    
+    /* Input Text Fixes */
+    input, textarea { color: #000000 !important; font-size: 15px !important; font-weight: 500 !important; }
+    div[data-baseweb="select"]:not([data-testid="stDataEditor"] *) * { color: #000000 !important; }
+
+    /* Button Styling */
+    .stButton > button {
+        background-color: #FACC15 !important; color: #000 !important; font-weight: 700; border-radius: 8px; border: none; height: 44px; width: 100%; transition: 0.2s;
+    }
+    .stButton > button:hover { background-color: #EAB308 !important; transform: translateY(-1px); }
+
+    /* Metrics */
+    [data-testid="stMetricValue"] { color: #16A34A; font-weight: 800; font-size: 28px; }
 </style>
 """, unsafe_allow_html=True)
 
-@st.cache_resource
-def get_connection():
-    try:
-        if "gcp_service_account" not in st.secrets: return None
-        creds_dict = st.secrets["gcp_service_account"]
-        scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-        creds = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-        return gspread.authorize(creds)
-    except Exception as e:
-        st.error(f"DB Connection Error: {e}")
-        return None
-
+# --- 2. DATA CORE (SINGLE SOURCE OF TRUTH) ---
 SHEET_ID = '1eUi8Neog9mXb5J17G3WTvCehtR0Bz3-mKkw49gG8tAE'
 
-def load_data():
-    client = get_connection()
+@st.cache_resource
+def get_client():
+    if "gcp_service_account" not in st.secrets:
+        st.error("Missing GCP Credentials in Secrets.")
+        return None
+    scopes = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
+    return gspread.authorize(creds)
+
+def load_clean_data():
+    client = get_client()
     if not client: return pd.DataFrame()
     try:
         sheet = client.open_by_key(SHEET_ID).sheet1
-        data = sheet.get_all_records()
-        df = pd.DataFrame(data)
-        expected_cols = ["Table", "Customer Name", "Phone Number", "Start", "End", "Status", "ID", "Notes", "Pax"]
-        for col in expected_cols:
-            if col not in df.columns: df[col] = ""
-        if not df.empty:
-            df['Start'] = pd.to_datetime(df['Start'], errors='coerce')
-            df['End'] = pd.to_datetime(df['End'], errors='coerce')
-            # Handle potential numeric conversion for Pax
-            df['Pax'] = pd.to_numeric(df['Pax'], errors='coerce').fillna(0)
+        df = pd.DataFrame(sheet.get_all_records())
+        if df.empty: return df
+        # Ensure strict typing for data quality
+        df['Start'] = pd.to_datetime(df['Start'])
+        df['End'] = pd.to_datetime(df['End'])
+        df['Pax'] = pd.to_numeric(df['Pax']).fillna(0).astype(int)
         return df
-    except: return pd.DataFrame()
+    except Exception as e:
+        st.error(f"Data Load Error: {e}")
+        return pd.DataFrame()
 
-def check_availability(new_start, new_end, requested_tables, existing_df):
-    """Business Logic: Checks if tables are free during the requested window."""
-    if existing_df.empty: return True, []
-    
-    # Filter for active reservations only
-    active = existing_df[existing_df['Status'] == 'Reserved'].copy()
+# --- 3. LOGIC MODULES ---
+def check_conflicts(start_dt, end_dt, target_tables, df):
+    if df.empty: return False, []
+    # Only check active reservations
+    active = df[df['Status'] == 'Reserved']
     conflicts = []
     
     for _, row in active.iterrows():
-        # Check time overlap: (StartA < EndB) and (EndA > StartB)
-        if (new_start < row['End']) and (new_end > row['Start']):
-            row_tables = [t.strip() for t in str(row['Table']).split(',')]
-            overlap_tables = set(requested_tables).intersection(set(row_tables))
-            if overlap_tables:
-                conflicts.append(f"{row['Customer Name']} ({', '.join(overlap_tables)})")
-                
-    return (len(conflicts) == 0), conflicts
+        # Time Overlap Logic: (StartA < EndB) and (EndA > StartB)
+        if (start_dt < row['End']) and (end_dt > row['Start']):
+            existing_tables = [t.strip() for t in str(row['Table']).split(',')]
+            intersection = set(target_tables).intersection(set(existing_tables))
+            if intersection:
+                conflicts.append(f"{row['Customer Name']} ({', '.join(intersection)})")
+    return (len(conflicts) > 0), conflicts
 
-def add_reservation(payload):
-    client = get_connection()
-    sheet = client.open_by_key(SHEET_ID).sheet1
-    table_str = ", ".join(payload["Table"])
-    row_data = [
-        table_str, payload["Customer Name"], payload["Phone Number"],
-        payload["Start"].strftime("%Y-%m-%d %H:%M:%S"), 
-        payload["End"].strftime("%Y-%m-%d %H:%M:%S"), 
-        payload["Status"], payload["ID"], payload["Notes"], payload["Pax"]
-    ]
-    sheet.append_row(row_data, value_input_option='USER_ENTERED')
-
-def update_status_batch(changes_dict):
-    client = get_connection()
-    sheet = client.open_by_key(SHEET_ID).sheet1
-    id_list = sheet.col_values(7)
-    updates = []
-    for row_id, new_status in changes_dict.items():
-        try:
-            row_num = id_list.index(row_id) + 1
-            updates.append({'range': f'F{row_num}', 'values': [[new_status]]})
-        except: continue
-    if updates: sheet.batch_update(updates)
-
-# --- MAIN APP ---
+# --- 4. INTERFACE ---
 st.title("🍽️ Vert Reservation Manager")
 tab1, tab2 = st.tabs(["📝 NEW BOOKING", "📊 SCHEDULE GRID"])
-
-# Pre-load data once for the session
-df_all = load_data()
+df_main = load_clean_data()
 
 with tab1:
-    st.subheader("📅 Date & Time")
-    c_date, c_warning = st.columns([1, 2])
-    with c_date:
-        res_date = st.date_input("Select Date", min_value=datetime.now())
+    st.subheader("Booking Details")
+    # Quick search for returning guests
+    search_list = []
+    if not df_main.empty:
+        search_list = (df_main['Customer Name'] + " | " + df_main['Phone Number']).unique().tolist()
     
-    if res_date.weekday() == 0:
-        st.error("⛔ **STOP!** Monday selected. (Venue Closed)")
+    selected_guest = st.selectbox("Guest Search", ["New Guest"] + sorted(search_list))
+    init_name = selected_guest.split(" | ")[0] if "|" in selected_guest else ""
+    init_phone = selected_guest.split(" | ")[1] if "|" in selected_guest else ""
 
-    st.markdown("---")
-    
-    search_options = []
-    if not df_all.empty:
-        temp_df = df_all[["Customer Name", "Phone Number"]].drop_duplicates()
-        search_options = (temp_df["Customer Name"].astype(str) + " | " + temp_df["Phone Number"].astype(str)).tolist()
-    
-    st.subheader("👤 Guest Information")
-    guest_search = st.selectbox("Search Guest (Auto-fill)", ["+ Add New Guest"] + sorted(search_options))
-    val_name, val_phone = (guest_search.split(" | ") if guest_search != "+ Add New Guest" else ("", ""))
-
-    with st.form("res_form", clear_on_submit=True):
+    with st.form("booking_form"):
         c1, c2 = st.columns(2)
-        with c1: final_cust = st.text_input("Customer Name", value=val_name)
-        with c2: final_phone = st.text_input("Phone Number", value=val_phone)
+        name = c1.text_input("Name", value=init_name)
+        phone = c2.text_input("Phone", value=init_phone)
         
         c3, c4, c5, c6 = st.columns(4)
-        with c3: pax = st.number_input("Guests", min_value=1, value=2)
-        with c4: res_time = st.time_input("Time", value=time(12, 0))
-        with c5: duration = st.selectbox("Duration", [1, 2, 3, 4, 5], index=1, format_func=lambda x: f"{x} Hours")
-        with c6: 
-            table_list = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
-            tables = st.multiselect("Table(s)", table_list)
+        b_date = c3.date_input("Date", value=datetime.now())
+        b_time = c4.time_input("Time", value=time(18, 0))
+        b_pax = c5.number_input("Pax", min_value=1, step=1)
+        b_dur = c6.selectbox("Duration", [1, 2, 3], format_func=lambda x: f"{x} hours")
         
-        notes = st.text_input("Notes")
-        submit = st.form_submit_button("✅ CONFIRM RESERVATION")
+        b_tables = st.multiselect("Select Table(s)", [f"Table {i}" for i in range(1, 9)] + ["VIP", "Outdoor"])
+        b_notes = st.text_input("Notes")
         
-        if submit:
-            start_dt = datetime.combine(res_date, res_time)
-            end_dt = start_dt + timedelta(hours=duration)
+        if st.form_submit_button("CREATE RESERVATION"):
+            start_val = datetime.combine(b_date, b_time)
+            end_val = start_val + timedelta(hours=b_dur)
             
-            # Feature: Conflict Validation
-            is_available, conflicts = check_availability(start_dt, end_dt, tables, df_all)
+            has_conflict, details = check_conflicts(start_val, end_val, b_tables, df_main)
             
-            if not (final_cust and final_phone and tables):
-                st.error("Missing details. Please ensure Name, Phone, and Table are selected.")
-            elif not is_available:
-                st.error(f"⚠️ **TABLE CONFLICT!** The following bookings already exist for this time: {', '.join(conflicts)}")
+            if not (name and phone and b_tables):
+                st.warning("Missing required fields.")
+            elif has_conflict:
+                st.error(f"Overlap detected: {', '.join(details)}")
             else:
-                with st.spinner("Processing booking..."):
-                    payload = {
-                        "Table": tables, "Customer Name": final_cust, "Phone Number": final_phone,
-                        "Start": start_dt, "End": end_dt,
-                        "Status": "Reserved", "ID": str(uuid.uuid4())[:8], "Notes": notes, "Pax": pax
-                    }
-                    add_reservation(payload)
-                    st.balloons() 
-                    st.success(f"Successfully booked for {final_cust}!")
-                    st.cache_resource.clear()
-                    st.rerun()
+                client = get_client()
+                sheet = client.open_by_key(SHEET_ID).sheet1
+                new_row = [", ".join(b_tables), name, phone, str(start_val), str(end_val), "Reserved", str(uuid.uuid4())[:8], b_notes, b_pax]
+                sheet.append_row(new_row, value_input_option="USER_ENTERED")
+                st.success(f"Reserved {name} successfully!")
+                st.cache_resource.clear()
+                st.rerun()
 
 with tab2:
-    col_f1, _ = st.columns([1, 2])
-    with col_f1:
-        view_date = st.date_input("📅 View Schedule For", datetime.now(), key="grid_view_final")
-
-    df_day = df_all[df_all['Start'].dt.date == view_date].copy() if not df_all.empty else pd.DataFrame()
+    view_date = st.date_input("Filter Date", value=datetime.now())
+    day_df = df_main[df_main['Start'].dt.date == view_date] if not df_main.empty else pd.DataFrame()
     
-    # --- GANTT CHART LOGIC ---
-    start_view = datetime.combine(view_date, time(10, 0))
-    end_view = datetime.combine(view_date, time(23, 0))
-    all_tables = [f"Table {i}" for i in range(1, 9)] + ["Outdoor", "VIP"]
-
-    confirmed = df_day[df_day['Status'] == 'Reserved'] if not df_day.empty else pd.DataFrame()
-    total_res = len(confirmed)
-    total_pax = confirmed['Pax'].sum() if not confirmed.empty else 0
+    # KPIs
+    confirmed = day_df[day_df['Status'] == 'Reserved']
+    k1, k2, k3 = st.columns(3)
+    k1.metric("Total Bookings", len(confirmed))
+    k2.metric("Total Pax", int(confirmed['Pax'].sum()) if not confirmed.empty else 0)
     
-    st.markdown("### 📈 Daily Summary")
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Active Reservations", total_res)
-    m2.metric("Total Pax", int(total_pax))
-    m3.metric("Tables Occupied", confirmed['Table'].str.split(', ').explode().nunique() if not confirmed.empty else 0)
-    st.markdown("---")
+    # Calculate utilization
+    occ = (confirmed['Table'].str.split(', ').explode().nunique() / 10) * 100 if not confirmed.empty else 0
+    k3.metric("Table Occupancy", f"{occ:.0f}%")
 
-    # Chart Generation
+    # Gantt Visualization
     if not confirmed.empty:
-        plot_df = confirmed.assign(Table=confirmed['Table'].str.split(', ')).explode('Table')
-        plot_df['IsDummy'] = False
+        # Explode tables so one bar shows per table
+        viz_df = confirmed.assign(Table=confirmed['Table'].str.split(', ')).explode('Table')
+        
+        # Consistent Color Logic
+        viz_df['Color'] = viz_df['Table'].apply(lambda x: "#F59E0B" if "VIP" in x else ("#10B981" if "Outdoor" in x else "#3B82F6"))
+        
+        fig = px.timeline(viz_df, x_start="Start", x_end="End", y="Table", text="Customer Name", color="Color", color_discrete_map="identity")
+        fig.update_layout(xaxis=dict(tickformat="%H:%M", side="top", title=""), yaxis=dict(title="", categoryorder="total ascending"), plot_bgcolor="white")
+        st.plotly_chart(fig, use_container_width=True)
     else:
-        plot_df = pd.DataFrame()
+        st.info("No active reservations for this day.")
 
-    skeleton_df = pd.DataFrame([{"Table": t, "Start": start_view, "End": start_view, "IsDummy": True} for t in all_tables])
-    final_plot_df = pd.concat([skeleton_df, plot_df], ignore_index=True)
-
-    fig = px.timeline(
-        final_plot_df, x_start="Start", x_end="End", y="Table",
-        color="IsDummy", color_discrete_map={True: "rgba(0,0,0,0)", False: "#17A363"},
-        hover_name="Customer Name" if "Customer Name" in final_plot_df.columns else None
-    )
-    
-    fig.update_layout(
-        xaxis_range=[start_view, end_view],
-        xaxis=dict(tickformat="%H:%M", gridcolor="#CBD5E0", side="top", title=""),
-        yaxis=dict(categoryorder="array", categoryarray=all_tables[::-1], title=""),
-        plot_bgcolor="#FFFFFF", height=500, showlegend=False, margin=dict(l=0, r=0, t=40, b=0)
-    )
-    st.plotly_chart(fig, use_container_width=True)
-
-    # --- STATUS MANAGEMENT ---
+    # Status Editor
     st.markdown("---")
-    header_col, toggle_col = st.columns([2, 1])
-    with header_col:
-        st.markdown("### 📋 Status Management")
-    with toggle_col:
-        show_cancelled = st.toggle("Show Cancelled Bookings", value=False)
-
-    if not df_day.empty:
-        df_display = df_day.copy() if show_cancelled else df_day[df_day['Status'] != 'Cancelled'].copy()
-
-        if not df_display.empty:
-            edited_df = st.data_editor(
-                df_display[["Status", "Start", "Table", "Customer Name", "Phone Number", "Pax", "Notes", "ID"]].sort_values("Start"),
-                column_config={
-                    "Status": st.column_config.SelectboxColumn("Status", options=["Reserved", "Cancelled"], required=True),
-                    "Start": st.column_config.DatetimeColumn("Arrival", format="HH:mm", disabled=True),
-                    "ID": None # Hidden
-                },
-                hide_index=True, use_container_width=True, key="editor_v2"
-            )
-
-            if st.button("💾 SAVE CHANGES", use_container_width=True):
-                changes = {}
-                for _, row in edited_df.iterrows():
-                    orig_status = df_day.loc[df_day['ID'] == row['ID'], 'Status'].values[0]
-                    if row['Status'] != orig_status:
-                        changes[row['ID']] = row['Status']
-                
-                if changes:
-                    update_status_batch(changes)
-                    st.toast("Updated Successfully!", icon="✅")
-                    st.cache_resource.clear()
-                    st.rerun()
-        else:
-            st.info("No active bookings for this date.")
-
+    st.subheader("Manage Status")
+    if not day_df.empty:
+        # We only allow editing the Status column
+        edited_df = st.data_editor(
+            day_df[['Status', 'Start', 'Customer Name', 'Table', 'ID']],
+            column_config={
+                "Status": st.column_config.SelectboxColumn(options=["Reserved", "Cancelled"]),
+                "ID": None, # Hide ID
+                "Start": st.column_config.DatetimeColumn(format="HH:mm", disabled=True)
+            },
+            hide_index=True, use_container_width=True
+        )
+        
+        if st.button("SAVE CHANGES"):
+            # Update Logic
+            client = get_client()
+            sheet = client.open_by_key(SHEET_ID).sheet1
+            all_ids = sheet.col_values(7)
+            
+            updates = []
+            for _, row in edited_df.iterrows():
+                try:
+                    row_idx = all_ids.index(row['ID']) + 1
+                    updates.append({'range': f'F{row_idx}', 'values': [[row['Status']]]})
+                except: continue
+            
+            if updates:
+                sheet.batch_update(updates)
+                st.cache_resource.clear()
+                st.rerun()
